@@ -29,7 +29,7 @@ get_all_runs=function(id, headers=c("User-Agent" = "Mozilla/5.0 (Macintosh; Inte
     
     out=list(name=name,
              id=id,
-             results=results)
+             results=results %>% janitor::clean_names())
     
     structure(out,
               class="parkrun_results")
