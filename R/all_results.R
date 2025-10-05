@@ -22,17 +22,8 @@ for(j in names(all_parkruns)){
   
 }
 
-all_results %>% filter(name=="Michael PETER") %>% 
-  summarise(people=n_distinct(parkrunner))
+runners=unique(all_results$name)
+parkruns <- sort(unique(all_results$event))
 
-
-all_results %>% filter(name=="Michael PETER") %>% 
-  count(parkrunner) %>% 
-  arrange(-n) %>% 
-  head(20)
-
-
-all_results %>% filter(name=="Michael PETER") %>% 
-  summarise(event=n_distinct(event), .by="parkrunner") %>% 
-  arrange(-event) %>% 
-  head(20)
+save(all_results,runners,parkruns, file="data/all_results.RDa")
+save(all_results,runners,parkruns, file="parkrunmutuals/all_results.RDa")
