@@ -5,13 +5,13 @@ library(shinyWidgets)
 library(DT)
 load("all_results.RDa")
 
-all_results2=all_results %>% count(name, parkrunner) %>% arrange(name,-n) %>% filter(name!=parkrunner)
+all_results2=all_results %>% count(name, parkrunner) %>% filter(n>=3) %>% arrange(name,-n) %>% filter(name!=parkrunner)
 ui <- navbarPage(
   "parkrun mutuals",
   tabPanel("Aggregate",
            sidebarLayout(
              sidebarPanel(
-               radioButtons("group", "", c("ADAPAT" = "adapat", "WNR" = "wnr", "Bate Famliy" = "bate"), selected = "adapat", inline = TRUE),
+               radioButtons("group", "", c("ADAPAT" = "adapat", "WNR" = "wnr", "Bate Famliy" = "bate", "Others"="others"), selected = "adapat", inline = TRUE),
                pickerInput("name", "parkrunner", choices = NULL, selected = NULL),
                radioButtons("eventsruns", "Events or Runs", c("Events" = "events", "Runs" = "runs"), selected = "events", inline = TRUE),
                pickerInput("parkrun_name", "parkruns", choices = NULL, selected = NULL, multiple = TRUE),
@@ -26,7 +26,7 @@ ui <- navbarPage(
   tabPanel("Head-to-Head",
            sidebarLayout(
              sidebarPanel(
-               radioButtons("group2", "", c("ADAPAT" = "adapat", "WNR" = "wnr", "Bate Famliy" = "bate"), selected = "adapat", inline = TRUE),
+               radioButtons("group2", "", c("ADAPAT" = "adapat", "WNR" = "wnr", "Bate Famliy" = "bate", "Others"="others"), selected = "adapat", inline = TRUE),
                pickerInput("name2", "parkrunner", choices = NULL, selected = NULL),
                selectizeInput("name_h2h", "Head-to-head", 
                               choices = as.character(0),
@@ -35,7 +35,9 @@ ui <- navbarPage(
                                 placeholder = "Start typing…",
                                 create = FALSE
                               )),
-               pickerInput("parkrun_name2", "parkruns", choices = NULL, selected = NULL, multiple = TRUE)
+               pickerInput("parkrun_name2", "parkruns", choices = NULL, selected = NULL, multiple = TRUE),
+               switchInput("exclude_all", "Exclude ALL", value = FALSE, width = "100%"),
+               HTML("Minimum of 3 parkruns")
              ),
              mainPanel(
                htmlOutput("text"),
@@ -66,7 +68,8 @@ server <- function(input, output, session) {
              "Isabel PRECIOUS-BIRDS", "Jon SHAW", "Lindsay HASTON",
              "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
              "Sebastian Bate"
-           )
+           ),
+           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","iamh CONROY VAN LEEUWEN")
     )
   })
   
@@ -138,7 +141,8 @@ server <- function(input, output, session) {
              "Isabel PRECIOUS-BIRDS", "Jon SHAW", "Lindsay HASTON",
              "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
              "Sebastian Bate"
-           )
+           ),
+           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","iamh CONROY VAN LEEUWEN")
     )
   })
   
@@ -155,6 +159,8 @@ server <- function(input, output, session) {
     updatePickerInput(session, "name_h2h", choices = get_rivals(), selected = get_rivals())
     
   })
+  
+  
   
   observeEvent(get_rivals(), {
     req(length(get_rivals()) > 0)
@@ -173,9 +179,23 @@ server <- function(input, output, session) {
     sort(unique((all_results %>% filter(name == input$name2, parkrunner==input$name_h2h))$event) )
   })
   
+  
+  
   observeEvent(mutual_parkruns(), {
     updatePickerInput(session, "parkrun_name2", choices = mutual_parkruns(), selected = mutual_parkruns())
     
+  })
+  
+  observe({
+    current_parks2 <- mutual_parkruns()
+    
+    if (!input$exclude_all) {
+      prs2 <- current_parks2
+    } else {
+      prs2 <- character(0)
+    }
+    
+    updatePickerInput(session, "parkrun_name2", selected = prs2)
   })
   
   head_to_head <- reactive({
@@ -196,6 +216,7 @@ server <- function(input, output, session) {
       dplyr::select(-rank, -pos) %>%
       pivot_wider(names_from = parkrunner, values_from = time) %>%
       na.omit() %>%
+      dplyr::select(event, eventno, any_of(c(input$name2,input$name_h2h))) %>% 
       rename("Event"=event, "Number"=eventno)
   },options = list(
     autoWidth = TRUE,

@@ -104,6 +104,10 @@ ids=tribble(~id,
             "888332", #Colm
             "1166640", #gary
             "81779", #jon
+            
+            "5301549", #bob
+            "3965294", #helena
+            "3590867", #niamh
 )
 
 all_parkruns=list()
