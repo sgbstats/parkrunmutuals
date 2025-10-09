@@ -1,6 +1,8 @@
 input=list()
 input$group="adapat"
 input$name="Sebastian BATE"
+input$name2="Sebastian BATE"
+input$name_h2h="Lawrence BATE"
 input$min=3
 input$eventsruns="events"
 prs <- sort(unique((all_results %>% filter(name == input$name))$event))
