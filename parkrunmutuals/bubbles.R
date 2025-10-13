@@ -8,7 +8,7 @@ bubble=function(var, name_in,prs, others, min=3, data_in=all_results){
     filter(name==name_in,event %in% prs) %>%
     summarise(events=n_distinct(event),runs=n(),.by=c("name","parkrunner")) %>% 
     mutate(value=.data[[var]]) %>%
-    arrange(-events, -runs) %>% 
+    arrange(-value,-events, -runs) %>% 
     filter(row_number()<=20 | parkrunner %in% others,value>=min)
   
   packing <- circleProgressiveLayout(data$value, sizetype = 'area')

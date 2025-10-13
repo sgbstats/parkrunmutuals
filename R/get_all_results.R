@@ -40,7 +40,7 @@ get_results=function(url, headers=c(`User-Agent` = "Mozilla/5.0 (Windows NT 10.0
   )
 }
 
-get_all_results=function(parkrunner,folder="data/results/",skip_errors=T,log_file="error_log.txt",...){
+get_all_results=function(parkrunner,folder="C:/R/git/parkrunmutuals/data/results/",skip_errors=T,log_file="C:/R/git/parkrunmutuals/error_log.txt",...){
   if(class(parkrunner)!="parkrun_results") break
   results=parkrunner[["results"]]
   for(i in 1:nrow(results)){
@@ -77,15 +77,15 @@ get_all_results=function(parkrunner,folder="data/results/",skip_errors=T,log_fil
 }
 
 
-load("data/all_parkruns.RDa")
+load("C:/R/git/parkrunmutuals/data/all_parkruns.RDa")
 
 for(j in names(all_parkruns)){
   cat(crayon::blue(paste(j, "\n")))
   get_all_results(all_parkruns[[j]])
 }
-# ls=list.files("data/results", full.names = T)
-# for(i in ls){
-#   read.csv(i) %>% 
-#     dplyr::select(pos,parkrunner,time) %>% 
-#     write.csv(i, row.names = F)
-# }
+ls=list.files("data/results", full.names = T)
+for(i in ls){
+  read.csv(i) %>%
+    dplyr::select(pos,parkrunner,time) %>%
+    write.csv(i, row.names = F)
+}

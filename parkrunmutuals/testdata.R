@@ -4,8 +4,8 @@ input$name="Sebastian BATE"
 input$name2="Sebastian BATE"
 input$name_h2h="Lawrence BATE"
 input$min=3
-input$eventsruns="events"
-prs <- sort(unique((all_results %>% filter(name == input$name))$event))
+input$eventsruns="runs"
+input$parkruns_names <- sort(unique((all_results %>% filter(name == input$name))$event))
 names <- switch(input$group,
                 "adapat" = c(
                   "Adam BURNETT", "Alex BUCKLEY", "Andrew CARLSON", "Charlotte TURNER",

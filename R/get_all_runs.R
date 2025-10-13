@@ -118,7 +118,8 @@ for(i in ids$id){
   Sys.sleep(25)
 }
 
-save(all_parkruns, file="data/all_parkruns.RDa")
+
+save(all_parkruns, file="C:/R/git/parkrunmutuals/data/all_parkruns.RDa")
 
 # for(i in names(all_parkruns)){
 #   all_parkruns[[i]][["results"]]=all_parkruns[[i]][["results"]] %>% 

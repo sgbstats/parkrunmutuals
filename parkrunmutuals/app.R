@@ -3,6 +3,19 @@ library(shinyjs)
 library(tidyverse)
 library(shinyWidgets)
 library(DT)
+
+options(gargle_oauth_cache = ".secrets",
+        gargle_oauth_email = TRUE)
+googledrive::drive_auth(
+  cache = ".secrets",
+  email = "sebastiangbate@gmail.com"
+)
+googledrive::drive_download(googledrive::as_id("11d6wDY_ryjx5sxv5sVAS1x_wbquVQqLY"),
+                            path="all_results.RDa",
+                            overwrite = T)
+
+source("bubbles.R")
+
 load("all_results.RDa")
 
 all_results2=all_results %>% count(name, parkrunner) %>% filter(n>=3) %>% arrange(name,-n) %>% filter(name!=parkrunner)
@@ -16,10 +29,19 @@ ui <- navbarPage(
                radioButtons("eventsruns", "Events or Runs", c("Events" = "events", "Runs" = "runs"), selected = "events", inline = TRUE),
                pickerInput("parkrun_name", "parkruns", choices = NULL, selected = NULL, multiple = TRUE),
                switchInput("exclude_gm", "Exclude GM", value = FALSE, width = "100%"),
-               numericInput("min", "Minimum", value=3)
+               numericInput("min", "Minimum", value=3),
+               uiOutput("update_time")
+               
                
              ),
              mainPanel(
+               tags$head(tags$script('$(document).on("shiny:connected", function(e) {
+                            Shiny.onInputChange("innerWidth", window.innerWidth);
+                            });
+                            $(window).resize(function(e) {
+                            Shiny.onInputChange("innerWidth", window.innerWidth);
+                            });
+                            ')),
                plotOutput("main")
              )
            )),
@@ -49,6 +71,11 @@ ui <- navbarPage(
 
 server <- function(input, output, session) {
   
+  output$update_time=renderUI({ 
+    HTML(paste0("Last update: ",
+                format(date, format="%Y-%m-%d")))
+  })
+  
   #panel 1
   group_names <- reactive({
     switch(input$group,
@@ -69,7 +96,7 @@ server <- function(input, output, session) {
              "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
              "Sebastian Bate"
            ),
-           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","iamh CONROY VAN LEEUWEN")
+           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN")
     )
   })
   
@@ -110,11 +137,8 @@ server <- function(input, output, session) {
   
   output$main=renderPlot({
     req(input$name, input$parkrun_name, input$eventsruns, input$group, input$min)
-    
-    source("bubbles.R")
-    
-    bubble(input$eventsruns,input$name,input$parkrun_name,input$group,input$min, data_in=all_results)
-  })
+    bubble(var=input$eventsruns,name_in=input$name,prs=input$parkrun_name,others=group_names(),min=input$min, data_in=all_results)
+  },height=reactive(ifelse(!is.null(input$innerWidth),input$innerWidth*2/5,0)))
   
   #panel 2
   
@@ -142,7 +166,7 @@ server <- function(input, output, session) {
              "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
              "Sebastian Bate"
            ),
-           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","iamh CONROY VAN LEEUWEN")
+           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN")
     )
   })
   
