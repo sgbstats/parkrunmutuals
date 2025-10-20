@@ -3,7 +3,7 @@ library(tidyverse)
 load("C:/R/git/parkrunmutuals/data/all_parkruns.RDa")
 
 all_results=tribble(~"name", ~"event", ~"eventno",~"pos",~"parkrunner",~"time" )
-folder="data/results/"
+folder="C:/R/git/parkrunmutuals/data/results/"
 for(j in names(all_parkruns)){
   cat(crayon::blue(paste(j, "\n")))
   for(i in 1:nrow(all_parkruns[[j]][["results"]])){

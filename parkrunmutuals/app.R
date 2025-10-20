@@ -57,6 +57,7 @@ ui <- navbarPage(
                                 placeholder = "Start typing…",
                                 create = FALSE
                               )),
+               radioButtons("filter_wins", "", c("All Results"="all", "Your Wins"="y", "Rival Wins"="r"), selected = "all", inline = T),
                pickerInput("parkrun_name2", "parkruns", choices = NULL, selected = NULL, multiple = TRUE),
                switchInput("exclude_all", "Exclude ALL", value = FALSE, width = "100%"),
                HTML("Minimum of 3 parkruns")
@@ -96,7 +97,7 @@ server <- function(input, output, session) {
              "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
              "Sebastian Bate"
            ),
-           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN")
+           "others"=c("Bob BAYMAN","Brita BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN")
     )
   })
   
@@ -166,7 +167,7 @@ server <- function(input, output, session) {
              "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
              "Sebastian Bate"
            ),
-           "others"=c("Bob BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN")
+           "others"=c("Bob BAYMAN","Brita BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN")
     )
   })
   
@@ -236,12 +237,29 @@ server <- function(input, output, session) {
   
   
   output$main2=renderDataTable({
-    head_to_head() %>%
+    req(input$filter_wins)
+    x=head_to_head() %>%
       dplyr::select(-rank, -pos) %>%
       pivot_wider(names_from = parkrunner, values_from = time) %>%
       na.omit() %>%
-      dplyr::select(event, eventno, any_of(c(input$name2,input$name_h2h))) %>% 
-      rename("Event"=event, "Number"=eventno)
+      dplyr::select(event, eventno, any_of(c(input$name2,input$name_h2h))) 
+
+    x1=x %>% merge(head_to_head() %>% filter(parkrunner==input$name_h2h) %>%
+                     dplyr::select(event, eventno, rank) )%>% 
+    rename("Event"=event, "Number"=eventno)
+    
+    if(input$filter_wins=="all"){
+      x2=x1 %>% dplyr::select(-rank)
+    }else if(input$filter_wins=="y"){
+      x2=x1 %>% filter(rank==0) %>% 
+        dplyr::select(-rank)
+    }else if(input$filter_wins=="r"){
+      x2=x1 %>% filter(rank==1) %>% 
+      dplyr::select(-rank)
+    }
+    
+    x2
+    
   },options = list(
     autoWidth = TRUE,
     # scrollX=T,
