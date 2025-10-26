@@ -3,12 +3,13 @@ library(httr)
 library(rvest)
 library(xml2)
 library(stringr)
+library(stringi)
 
 get_all_runs=function(id, headers=c(`User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
                                     `Accept` = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                                     `Accept-Language` = "en-US,en;q=0.9",
                                     `Connection` = "keep-alive")){
-  id=str_remove_all(id, "\\D")
+  id=str_remove_all(as.character(id), "\\D")
   
   response=GET(paste0("https://www.parkrun.org.uk/parkrunner/",id,"/all/"),
                add_headers(.headers = headers))
@@ -26,20 +27,12 @@ get_all_runs=function(id, headers=c(`User-Agent` = "Mozilla/5.0 (Windows NT 10.0
 
     results$url<- href[seq(3, length(href)+2, by = 3)]
     
+    results$short <- stringr::str_extract(results$url, "(?<=org.uk/)[^/]+")
     
     
     results=results %>% 
       janitor::clean_names() %>% 
-      mutate(event=case_when(event=="Henley Wood Oswestry"~"Henley Wood",
-                             event=="Bramhall Park"~"Bramhall",
-                             event=="Finsbury Park"~"Finsbury",
-                             event=="Bushy Park"~"Bushy",
-                             event=="Heaton Park"~"Heaton",
-                             event=="Y Promenâd Abermaw"~"Y Promenad Abermaw",
-                             event=="Gorleston Cliffs"~"Gorleston",
-                             event=="Stratford-upon-Avon"~"Stratford Upon Avon",
-                             T~event) %>% 
-               str_replace_all("[[:punct:]]", ""))
+      mutate(event=stri_trans_general(event, "Latin-ASCII"))
     
     h2_nodes <- html %>% html_elements("h2")
     
@@ -108,7 +101,7 @@ ids=tribble(~id,
             "5301549", #bob
             "3965294", #helena
             "3590867", #niamh
-            "5401482", #britta
+            "5401482", #britt
 )
 
 all_parkruns=list()

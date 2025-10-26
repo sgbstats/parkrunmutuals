@@ -17,6 +17,10 @@ googledrive::drive_download(googledrive::as_id("11d6wDY_ryjx5sxv5sVAS1x_wbquVQqL
 source("bubbles.R")
 
 load("all_results.RDa")
+load("distances.RDa")
+prs_short=parkruns_list$name
+names(prs_short)=parkruns_list$short
+
 
 all_results2=all_results %>% count(name, parkrunner) %>% filter(n>=3) %>% arrange(name,-n) %>% filter(name!=parkrunner)
 ui <- navbarPage(
@@ -65,6 +69,31 @@ ui <- navbarPage(
              mainPanel(
                htmlOutput("text"),
                dataTableOutput("main2")
+             )
+           )),
+  tabPanel("Mutual NENDY",
+           sidebarLayout(
+             sidebarPanel(
+               pickerInput("name3", "parkrunner", choices = c(
+                 "Adam BURNETT", "Alex BUCKLEY", "Andrew CARLSON", "Charlotte TURNER",
+                 "Frankie BALE", "Jonathan O'DONNELL", "Joseph GUNTRIP", "Luke DONALD",
+                 "Max LETCHFIELD", "Michael PETER", "Natalie HARPER", "Philip MOYLE",
+                 "Rachel BROWN", "Rob MOONEY", "Sebastian BATE", "Suzy HILL",
+                 "Tom ALMOND", "Catherine BATE", "Ewan BATE", "Lawrence BATE","Alexandra BERESFORD", "Callum SHINGLER", "Colm MULHERN",
+                 "Kirsty WATKINSON", "Gary SCOTT", "Helen ANDREWS",
+                 "Isabel PRECIOUS-BIRDS", "Jon SHAW", "Lindsay HASTON",
+                 "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
+                 "Bob BAYMAN","Brita BAYMAN", "Helena ROBINSON", "Lawrence BATE","Niamh CONROY VAN LEEUWEN"
+                 ), selected = NULL, multiple = T),
+              # pickerInput("home", "Home location", choices = prs_short, selected = "southmanchester")
+               selectizeInput("home", "Home location", choices = prs_short, selected = "southmanchester",
+                              options = list(
+                                placeholder = "Start typing…",
+                                create = FALSE
+                              ))
+               ),
+             mainPanel(
+               dataTableOutput("mnendy")
              )
            ))
 )
@@ -115,7 +144,7 @@ server <- function(input, output, session) {
     updatePickerInput(session, "parkrun_name", choices = parkruns_for_name(), selected = parkruns_for_name())
   })
   
-  gm <- c("Alexandra", "Bolton", "Bramhall", "Burnage", "Chadderton Hall", "Cheadle Hulme", "Clarence", "Fletcher Moss", "Haigh Woodland", "Heaton", "Hyde", "Marple", "Oldham", "Peel", "Pennington Flash", "Philips Park", "Sale Water", "South Manchester", "Stamford Park", "Stretford", "Watergrove", "Woodbank", "Wythenshawe", "Worsley Woods")
+  gm <- c("Alexandra", "Bolton", "Bramhall Park", "Burnage", "Chadderton Hall", "Cheadle Hulme", "Clarence", "Fletcher Moss", "Haigh Woodland", "Heaton", "Hyde", "Marple", "Oldham", "Peel", "Pennington Flash", "Philips Park", "Sale Water", "South Manchester", "Stamford Park", "Stretford", "Watergrove", "Woodbank", "Wythenshawe", "Worsley Woods")
   
   observe({
     current_parks <- input$parkrun_name
@@ -280,6 +309,22 @@ server <- function(input, output, session) {
     
     HTML(paste("<h2>",input$name2, leftwins, "-", rightwins, input$name_h2h, "</h2>" ))
   })
+  
+  output$mnendy=renderDataTable({
+    events_done2=events_done %>% filter(name %in% input$name3) %>% 
+      pull(event)
+    
+    x=distance %>% filter(name.x==input$home) %>% 
+      filter(!short %in% events_done2) %>% 
+      arrange(miles) %>% 
+      mutate(miles=sprintf("%.0f", miles)) %>% 
+      dplyr::select("Name"=short, "Distance (mi)"=miles) 
+
+    x
+  },options = list(
+    autoWidth = TRUE,
+    # scrollX=T,
+    pageLength=20))
 }
 
 shinyApp(ui = ui, server = server)

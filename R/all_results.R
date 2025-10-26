@@ -2,12 +2,13 @@ library(tidyverse)
 
 load("C:/R/git/parkrunmutuals/data/all_parkruns.RDa")
 
-all_results=tribble(~"name", ~"event", ~"eventno",~"pos",~"parkrunner",~"time" )
+all_results=tribble(~"name", ~"event", ~"eventno",~"pos",~"parkrunner",~"time", ~"short" )
 folder="C:/R/git/parkrunmutuals/data/results/"
 for(j in names(all_parkruns)){
   cat(crayon::blue(paste(j, "\n")))
   for(i in 1:nrow(all_parkruns[[j]][["results"]])){
     event=all_parkruns[[j]][["results"]][["event"]][i]
+    short=all_parkruns[[j]][["results"]][["short"]][i]
     eventno=all_parkruns[[j]][["results"]][["run_number"]][i]
     file=paste0(folder,event,eventno, ".csv")
     if(file.exists(file)){
@@ -23,8 +24,9 @@ for(j in names(all_parkruns)){
 
 runners=unique(all_results$name)
 parkruns <- sort(unique(all_results$event))
+events_done=all_results %>% count(name, event) %>% dplyr::select(-n)
 date=Sys.Date()
-save(all_results,runners,parkruns,date, file="C:/R/git/parkrunmutuals/data/all_results.RDa")
+save(all_results,runners,parkruns,date,events_done, file="C:/R/git/parkrunmutuals/data/all_results.RDa")
 
 googledrive::drive_auth(
   email = TRUE,

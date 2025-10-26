@@ -27,3 +27,6 @@ names <- switch(input$group,
                   "Sebastian Bate"
                 )
 )
+
+input$name3=c("Sebastian BATE", "Luke DONALD")
+input$home="southmanchester"
