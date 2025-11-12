@@ -1,9 +1,9 @@
 library(tidyverse)
 
-load("C:/R/git/parkrunmutuals/data/all_parkruns.RDa")
+load("data/all_parkruns.RDa")
 
 all_results=tribble(~"name", ~"event", ~"eventno",~"pos",~"parkrunner",~"time", ~"short" )
-folder="C:/R/git/parkrunmutuals/data/results/"
+folder="data/results/"
 for(j in names(all_parkruns)){
   cat(crayon::blue(paste(j, "\n")))
   for(i in 1:nrow(all_parkruns[[j]][["results"]])){
@@ -26,7 +26,7 @@ runners=unique(all_results$name)
 parkruns <- sort(unique(all_results$event))
 events_done=all_results %>% count(name, event) %>% dplyr::select(-n)
 date=Sys.Date()
-save(all_results,runners,parkruns,date,events_done, file="C:/R/git/parkrunmutuals/data/all_results.RDa")
+save(all_results,runners,parkruns,date,events_done, file="data/all_results.RDa")
 
 googledrive::drive_auth(
   email = TRUE,
@@ -38,6 +38,6 @@ googledrive::drive_auth(
   token = NULL
 )
 
-googledrive::drive_update(media="C:/R/git/parkrunmutuals/data/all_results.RDa",
+googledrive::drive_update(media="data/all_results.RDa",
                           file=googledrive::as_id("11d6wDY_ryjx5sxv5sVAS1x_wbquVQqLY"),)
 # save(all_results,runners,parkruns, file="parkrunmutuals/all_results.RDa")
