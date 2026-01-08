@@ -1,45 +1,45 @@
-"pos","parkrunner","time"
-1,"Yitzhak BEN-AROYA","18:23"
-2,"Ed SIMMONS","21:03"
-3,"Barry NEALE","21:47"
-4,"John SHIRLEY","22:13"
-5,"Paul CLIFFORD","22:38"
-6,"Paul HEARN","22:59"
-7,"Amanda ROCHESTER","23:31"
-8,"Robert KENT","23:38"
-9,"Paul BERLYN","23:40"
-10,"Yat Wing SMART","23:41"
-11,"Vince DERITIS","23:48"
-12,"Marcus MARILIUS","24:46"
-13,"Barbara JONES","24:57"
-14,"Steve BARR","25:09"
-15,"Jeff CARTER","25:20"
-16,"King Keung LAU","25:44"
-17,"Bernard MINSKY","26:10"
-18,"Helen MILLER","26:34"
-19,"Stephen MILLER","26:34"
-20,"Maureen SHIRLEY","27:19"
-21,"John ABSON","27:23"
-22,"Bill HARDING","27:58"
-23,"Che F CHEUNG","28:42"
-24,"Suzanne BUTLER","30:18"
-25,"Chris SALVARY","30:35"
-26,"Claire DERITIS","30:45"
-27,"Roger EDMONDS-BROWN","30:49"
-28,"Jesstickles ZUBEK","30:59"
-29,"Kim HUNT","31:13"
-30,"Ann BOLITHO","31:15"
-31,"Janice ABSON","31:53"
-32,"Ali Habeeb AHMAD","33:46"
-33,"Juliet EYEIONS","34:00"
-34,"Sheryl Anne TYE","34:59"
-35,"Michelle KETT","36:51"
-36,"Nathan Owen BIBAUD","37:18"
-37,"Marc Alain BIBAUD","37:21"
-38,"Lily WALKER","38:19"
-39,"Meryl WALKER","38:25"
-40,"George GREEVES","39:14"
-41,"Richard GREEVES","39:15"
-42,"Sue GREEVES","43:13"
-43,"Michelle HURREN","45:59"
-44,"Judy WILSON","46:00"
+"pos","parkrunner","time","id"
+1,"Yitzhak BEN-AROYA","18:23",208538
+2,"Ed SIMMONS","21:03",101261
+3,"Barry NEALE","21:47",181983
+4,"John SHIRLEY","22:13",206962
+5,"Paul CLIFFORD","22:38",16568
+6,"Paul HEARN","22:59",181613
+7,"Amanda ROCHESTER","23:31",154620
+8,"Robert KENT","23:38",211954
+9,"Paul BERLYN","23:40",141727
+10,"Yat Wing SMART","23:41",201356
+11,"Vince DERITIS","23:48",179870
+12,"Marcus MARILIUS","24:46",181988
+13,"Barbara JONES","24:57",209453
+14,"Steve BARR","25:09",211526
+15,"Jeff CARTER","25:20",201428
+16,"King Keung LAU","25:44",210555
+17,"Bernard MINSKY","26:10",166716
+18,"Helen MILLER","26:34",98917
+19,"Stephen MILLER","26:34",98918
+20,"Maureen SHIRLEY","27:19",206968
+21,"John ABSON","27:23",146975
+22,"Bill HARDING","27:58",101185
+23,"Che F CHEUNG","28:42",210414
+24,"Suzanne BUTLER","30:18",211889
+25,"Chris SALVARY","30:35",211641
+26,"Claire DERITIS","30:45",179873
+27,"Roger EDMONDS-BROWN","30:49",185299
+28,"Jesstickles ZUBEK","30:59",181987
+29,"Kim HUNT","31:13",177640
+30,"Ann BOLITHO","31:15",211449
+31,"Janice ABSON","31:53",146974
+32,"Ali Habeeb AHMAD","33:46",134392
+33,"Juliet EYEIONS","34:00",11644
+34,"Sheryl Anne TYE","34:59",185475
+35,"Michelle KETT","36:51",197425
+36,"Nathan Owen BIBAUD","37:18",133783
+37,"Marc Alain BIBAUD","37:21",83530
+38,"Lily WALKER","38:19",158914
+39,"Meryl WALKER","38:25",111366
+40,"George GREEVES","39:14",205901
+41,"Richard GREEVES","39:15",205899
+42,"Sue GREEVES","43:13",208466
+43,"Michelle HURREN","45:59",196351
+44,"Judy WILSON","46:00",195842

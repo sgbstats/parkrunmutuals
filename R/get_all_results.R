@@ -19,23 +19,33 @@ get_results = function(
       if (status_code(response) != 200) {
         message(sprintf("Request failed [%d] for %s", code, url))
       }
-      html <- content(response, as = "text", encoding = "UTF-8") %>% read_html()
-      tables <- html %>% html_element("div.Results.Results")
+      html <- content(response, as = "text", encoding = "UTF-8") |> read_html()
+      tables <- html |> html_element("div.Results.Results")
 
-      results <- tables %>% html_table() %>% dplyr::select(c(1, 2, 6))
+      x = tables |>
+        html_nodes("a") |>
+        html_attr("href")
+
+      x1 = x[grepl("parkrunner", x)]
+      slash_pos = gregexpr("/", x1[1])[[1]][3]
+      id = substr(x1, slash_pos + 1, str_length(x1) - 1) |>
+        as.numeric()
+
+      results <- tables |> html_table() |> dplyr::select(c(1, 2, 6))
 
       names(results) = c("pos", "parkrunner", "time")
-      results = results %>%
+      results = results |>
         mutate(
-          parkrunner = str_extract(parkrunner, "^[^0-9]*") %>% str_trim(),
+          parkrunner = str_extract(parkrunner, "^[^0-9]*") |> str_trim(),
           time = str_extract(time, "^[0-9:]+")
-        ) %>%
-        drop_na(time)
+        ) |>
+        drop_na(time) |>
+        cbind(id)
 
       return(results)
     },
     error = function(e) {
-      stop("❌ Error: ", conditionMessage(e))
+      stop("Error: ", conditionMessage(e))
     },
     warning = function(e) {
       message(conditionMessage(e))
@@ -79,7 +89,7 @@ get_all_results = function(
         Sys.sleep(25)
       },
       error = function(e) {
-        message("❌ Error: ", conditionMessage(e))
+        message("Error: ", conditionMessage(e))
         write(paste(event, eventno, sep = ","), file = log_file, append = TRUE)
       },
       warning = function(e) {
@@ -98,8 +108,9 @@ for (j in names(all_parkruns)) {
   get_all_results(all_parkruns[[j]])
 }
 ls = list.files("data/results", full.names = T)
+ls = ls[grepl(".csv", ls)]
 for (i in ls) {
-  read.csv(i) %>%
-    dplyr::select(pos, parkrunner, time) %>%
+  read.csv(i) |>
+    dplyr::select(pos, parkrunner, time, id) |>
     write.csv(i, row.names = F)
 }
