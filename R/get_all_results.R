@@ -16,7 +16,9 @@ get_results = function(
   response = GET(url, add_headers(.headers = headers), timeout(15))
   tryCatch(
     {
-      if (status_code(response) != 200) {
+      if (status_code(response) == 408) {
+        warning(sprintf("Request failed [%d] for %s", code, url))
+      } else if (status_code(response) != 200) {
         message(sprintf("Request failed [%d] for %s", code, url))
       }
       html <- content(response, as = "text", encoding = "UTF-8") |> read_html()
