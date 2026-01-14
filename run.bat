@@ -8,9 +8,11 @@ rem Set the path to your R script
 set RSCRIPT_FILE="R\get_all_runs.R"
 set RSCRIPT_FILE2="R\get_all_results.R"
 set RSCRIPT_FILE3="R\all_results.R"
+set RSCRIPT_FILE4="R/wnr_parkrun_league.R"
 %RSCRIPT% --no-init-file %RSCRIPT_FILE%
 %RSCRIPT% --no-init-file %RSCRIPT_FILE2%
 %RSCRIPT% --no-init-file %RSCRIPT_FILE3%
+%RSCRIPT% --no-init-file %RSCRIPT_FILE4%
 
 
 pause

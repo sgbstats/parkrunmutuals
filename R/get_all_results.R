@@ -4,57 +4,7 @@ library(rvest)
 library(xml2)
 library(stringr)
 
-get_results = function(
-  url,
-  headers = c(
-    `User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-    `Accept` = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    `Accept-Language` = "en-US,en;q=0.9",
-    `Connection` = "keep-alive"
-  )
-) {
-  response = GET(url, add_headers(.headers = headers), timeout(15))
-  tryCatch(
-    {
-      if (status_code(response) == 408) {
-        warning(sprintf("Request failed [%d] for %s", code, url))
-      } else if (status_code(response) != 200) {
-        message(sprintf("Request failed [%d] for %s", code, url))
-      }
-      html <- content(response, as = "text", encoding = "UTF-8") |> read_html()
-      tables <- html |> html_element("div.Results.Results")
-
-      x = tables |>
-        html_nodes("a") |>
-        html_attr("href")
-
-      x1 = x[grepl("parkrunner", x)]
-      slash_pos = gregexpr("/", x1[1])[[1]][3]
-      id = substr(x1, slash_pos + 1, str_length(x1) - 1) |>
-        as.numeric()
-
-      results <- tables |> html_table() |> dplyr::select(c(1, 2, 6))
-
-      names(results) = c("pos", "parkrunner", "time")
-      results = results |>
-        mutate(
-          parkrunner = str_extract(parkrunner, "^[^0-9]*") |> str_trim(),
-          time = str_extract(time, "^[0-9:]+")
-        ) |>
-        drop_na(time) |>
-        cbind(id)
-
-      return(results)
-    },
-    error = function(e) {
-      stop("Error: ", conditionMessage(e))
-    },
-    warning = function(e) {
-      message(conditionMessage(e))
-    }
-  )
-}
-
+source("R/get_results.R")
 get_all_results = function(
   parkrunner,
   folder = "data/results/",
@@ -85,7 +35,7 @@ get_all_results = function(
     cat(paste(event, eventno, "\n"))
     tryCatch(
       {
-        x = get_results(url = url)
+        x = get_results(url = url)[["results"]]
 
         write.csv(x, file, row.names = F)
         Sys.sleep(25)
