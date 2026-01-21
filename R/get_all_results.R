@@ -19,17 +19,17 @@ get_results = function(
       if (status_code(response) != 200) {
         message(sprintf("Request failed [%d] for %s", code, url))
       }
-      html <- content(response, as = "text", encoding = "UTF-8") %>% read_html()
-      tables <- html %>% html_element("div.Results.Results")
+      html <- content(response, as = "text", encoding = "UTF-8") |> read_html()
+      tables <- html |> html_element("div.Results.Results")
 
-      results <- tables %>% html_table() %>% dplyr::select(c(1, 2, 6))
+      results <- tables |> html_table() |> dplyr::select(c(1, 2, 6))
 
       names(results) = c("pos", "parkrunner", "time")
-      results = results %>%
+      results = results |>
         mutate(
-          parkrunner = str_extract(parkrunner, "^[^0-9]*") %>% str_trim(),
+          parkrunner = str_extract(parkrunner, "^[^0-9]*") |> str_trim(),
           time = str_extract(time, "^[0-9:]+")
-        ) %>%
+        ) |>
         drop_na(time)
 
       return(results)
@@ -91,7 +91,7 @@ get_all_results = function(
 }
 
 
-load("C:/R/git/parkrunmutuals/data/all_parkruns.RDa")
+load("data/all_parkruns.RDa")
 
 for (j in names(all_parkruns)) {
   cat(crayon::blue(paste(j, "\n")))
@@ -99,7 +99,7 @@ for (j in names(all_parkruns)) {
 }
 ls = list.files("data/results", full.names = T)
 for (i in ls) {
-  read.csv(i) %>%
-    dplyr::select(pos, parkrunner, time) %>%
+  read.csv(i) |>
+    dplyr::select(pos, parkrunner, time) |>
     write.csv(i, row.names = F)
 }

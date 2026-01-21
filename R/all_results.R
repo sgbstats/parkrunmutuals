@@ -15,7 +15,7 @@ for (j in names(all_parkruns)) {
     eventno = all_parkruns[[j]][["results"]][["run_number"]][i]
     file = paste0(folder, event, eventno, ".csv")
     if (file.exists(file)) {
-      x = read.csv(file) %>%
+      x = read.csv(file) |>
         mutate(
           name = all_parkruns[[j]][["name"]],
           event = event,
@@ -23,13 +23,13 @@ for (j in names(all_parkruns)) {
           #  time = as.numeric(hms::as.hms(time))
         )
     }
-    all_results = all_results %>% rbind.data.frame(x)
+    all_results = all_results |> rbind.data.frame(x)
   }
 }
 
 runners = unique(all_results$name)
 parkruns <- sort(unique(all_results$event))
-events_done = all_results %>% count(name, event) %>% dplyr::select(-n)
+events_done = all_results |> count(name, event) |> dplyr::select(-n)
 date = Sys.Date()
 save(
   all_results,

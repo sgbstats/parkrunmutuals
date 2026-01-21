@@ -26,30 +26,30 @@ get_all_runs = function(
       if (status_code(response) != 200) {
         stop(sprintf("Request failed [%d] for %s", code, url))
       }
-      html <- content(response, as = "text", encoding = "UTF-8") %>% read_html()
-      tables <- html %>% html_elements("table#results")
-      results = tables[[3]] %>% html_table()
-      href = tables[[3]] %>%
-        html_nodes("a") %>%
+      html <- content(response, as = "text", encoding = "UTF-8") |> read_html()
+      tables <- html |> html_elements("table#results")
+      results = tables[[3]] |> html_table()
+      href = tables[[3]] |>
+        html_nodes("a") |>
         html_attr("href")
 
       results$url <- href[seq(3, length(href) + 2, by = 3)]
 
       results$short <- stringr::str_extract(results$url, "(?<=org.uk/)[^/]+")
 
-      results = results %>%
-        janitor::clean_names() %>%
+      results = results |>
+        janitor::clean_names() |>
         mutate(event = stri_trans_general(event, "Latin-ASCII"))
 
-      h2_nodes <- html %>% html_elements("h2")
+      h2_nodes <- html |> html_elements("h2")
 
       # Extract plain text
-      h2_text <- h2_nodes %>% html_text2()
+      h2_text <- h2_nodes |> html_text2()
 
-      name <- str_extract(h2_text, "^[^(]+") %>% str_trim() # everything before "("
-      id <- str_extract(h2_text, "\\(([^)]+)\\)") %>%
-        str_remove_all("[()]") %>%
-        str_sub(2) %>%
+      name <- str_extract(h2_text, "^[^(]+") |> str_trim() # everything before "("
+      id <- str_extract(h2_text, "\\(([^)]+)\\)") |>
+        str_remove_all("[()]") |>
+        str_sub(2) |>
         as.numeric()
 
       out = list(name = name, id = id, results = results)
