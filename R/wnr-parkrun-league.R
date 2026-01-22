@@ -3,7 +3,7 @@ library(parkrunfunctions)
 library(stringr)
 library(lubridate)
 library(hms)
-
+library(glue)
 
 load("data/all_parkruns.RDa")
 
@@ -30,6 +30,7 @@ col = c(names(all_parkruns[["sebastianbate"]][["results"]]), "id", "name")
 hc = data.frame(matrix(ncol = length(col), nrow = 0))
 names(hc) = col
 
+
 for (i in names(all_parkruns)) {
   if (all_parkruns[[i]][["id"]] %in% ids$id) {
     hc = hc |>
@@ -45,7 +46,7 @@ for (i in names(all_parkruns)) {
 
 hc2 = hc |>
   mutate(
-    time = as.hms(if_else(
+    time = as_hms(if_else(
       stringr::str_length(time) == 5,
       paste0("00:", time),
       time
@@ -57,9 +58,180 @@ hc2 = hc |>
       run_date < as.Date("2026-01-01") &
         run_date >= as.Date("2025-07-01")
     ]),
-    woodbank = min(time[
+    wilmslow = min(time[
       run_date < as.Date("2026-02-01") &
         run_date >= as.Date("2025-07-01")
     ]),
+    salewater = min(time[
+      run_date < as.Date("2026-03-01") &
+        run_date >= as.Date("2025-07-01")
+    ]),
+    woodbank = min(time[
+      run_date < as.Date("2026-04-01") &
+        run_date >= as.Date("2025-07-01")
+    ]),
+    wythenshawe = min(time[
+      run_date < as.Date("2026-05-01") &
+        run_date >= as.Date("2025-07-01")
+    ]),
+    kingswayurmston = min(time[
+      run_date < as.Date("2026-06-01") &
+        run_date >= as.Date("2025-07-01")
+    ]),
     .by = c("name", "id")
+  ) |>
+  pivot_longer(cols = -c(name, id), values_to = "hc", names_to = "event") |>
+  mutate(
+    hc = as_hms(hc),
   )
+
+events = list("lymepark" = c(534:538))
+runners = hc2 |> distinct(name, id)
+
+res = tribble(
+  ~"pos" , ~"parkrunner" , ~"time" , ~"id" , ~"event" , ~"event_no"
+)
+volunteers = tribble(
+  ~"parkrunner" , ~"id" , ~"event" , ~"event_no"
+)
+
+for (i in names(events)) {
+  for (j in events[[i]]) {
+    cat(paste(i, j, "\n"))
+    tryCatch(
+      {
+        x = get_result(event = i, event_no = j, as_hms = T, as_Date = T)
+        res = res |>
+          rbind.data.frame(
+            x[["results"]] |>
+              mutate(event = i, event_no = j)
+          )
+
+        volunteers = volunteers |>
+          rbind.data.frame(
+            x[["volunteers"]] |>
+              mutate(event = i, event_no = j)
+          )
+        Sys.sleep(20)
+      },
+      error = function(e) {
+        conditionMessage(e)
+      },
+      warning = function(e) {
+        warning(conditionMessage(e))
+      }
+    )
+  }
+}
+
+
+eligible_results = runners |>
+  merge(
+    res |>
+      select(id, time, event, event_no),
+    all.x = T
+  )
+vol_pts = volunteers |>
+  filter(id %in% ids$id) |>
+  select(id, event, event_no) |>
+  merge(eligible_results |> select(id, time, event, event_no), all.x = T) |>
+  mutate(pts = if_else(is.na(time), 3, 1)) |>
+  summarise(pts = max(pts, na.rm = T), .by = c("id", "event"))
+
+
+time_diff = eligible_results |>
+  merge(
+    hc2,
+    all.x = T
+  ) |>
+  mutate(diff = time - hc) |>
+  slice_min(diff, by = c("id", "event"), with_ties = F) |>
+  select(id, event, diff, time) |>
+  arrange(diff) |>
+  mutate(pts = if_else(is.na(diff), 0, 14 - row_number()), .by = c("event")) |>
+  mutate(diff = as.character(as_hms(diff)), time = as.character(as_hms(time)))
+
+points = vol_pts |>
+  rbind(time_diff |> select(id, event, pts)) |>
+  summarise(total_pts = sum(pts), .by = "id")
+
+out = runners |>
+  merge(points) |>
+  merge(
+    hc2 |>
+      mutate(hc = as.character(hc)) |>
+      pivot_wider(
+        names_from = "event",
+        values_from = "hc",
+        names_prefix = "hc_"
+      ),
+    all.x = T
+  ) |>
+  merge(
+    time_diff |>
+      select(id, event, diff) |>
+      drop_na(event) |>
+      pivot_wider(
+        names_from = "event",
+        values_from = "diff",
+        names_prefix = "diff_"
+      ),
+    all.x = T
+  ) |>
+  merge(
+    time_diff |>
+      select(id, event, time) |>
+      drop_na(event) |>
+      pivot_wider(
+        names_from = "event",
+        values_from = "time",
+        names_prefix = "time_"
+      ),
+    all.x = T
+  ) |>
+  merge(
+    time_diff |>
+      select(id, event, pts) |>
+      drop_na(event) |>
+      pivot_wider(
+        names_from = "event",
+        values_from = "pts",
+        names_prefix = "pts_"
+      ),
+    all.x = T
+  ) |>
+  merge(
+    vol_pts |>
+      drop_na(event) |>
+      pivot_wider(
+        names_from = "event",
+        values_from = "pts",
+        names_prefix = "vol_"
+      ),
+    all.x = T
+  ) |>
+  select(
+    name,
+    id,
+    total_pts,
+    any_of(as.vector(outer(
+      c("hc", "time", "diff", "pts", "vol"),
+      c(
+        "lymepark",
+        "wilmslow",
+        "salewater",
+        "woodbank",
+        "wythenshawe",
+        "kingswayurmston"
+      ),
+      paste,
+      sep = "_"
+    )))
+  ) |>
+  select(name, id, total_pts, contains("lymepark"))
+
+googlesheets4::write_sheet(
+  out,
+  ss = "https://docs.google.com/spreadsheets/d/1tKqy3scDIttZti9yAMZbAtMcukINser_KFlXEYr-Sl8/edit?gid=0#gid=0",
+  sheet = "Scores"
+)
