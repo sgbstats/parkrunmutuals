@@ -21,7 +21,7 @@ ids = tribble(
   "16568"   , #Paul C
   "16569"   , #Lynda
   "3629365" , #Isabel
-  "888332"  , #Colm
+
   "1166640" , #gary
   "81779"   , #jon
 )
@@ -148,7 +148,7 @@ time_diff = eligible_results |>
   slice_min(diff, by = c("id", "event"), with_ties = F) |>
   select(id, event, diff, time) |>
   arrange(diff) |>
-  mutate(pts = if_else(is.na(diff), 0, 14 - row_number()), .by = c("event")) |>
+  mutate(pts = if_else(is.na(diff), 0, 13 - row_number()), .by = c("event")) |>
   mutate(diff = as.character(as_hms(diff)), time = as.character(as_hms(time)))
 
 points = vol_pts |>
@@ -231,7 +231,7 @@ out = runners |>
   select(name, id, total_pts, contains("lymepark"))
 
 googlesheets4::write_sheet(
-  out,
+  out |> arrange(-total_pts),
   ss = "https://docs.google.com/spreadsheets/d/1tKqy3scDIttZti9yAMZbAtMcukINser_KFlXEYr-Sl8/edit?gid=0#gid=0",
   sheet = "Scores"
 )

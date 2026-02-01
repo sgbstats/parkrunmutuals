@@ -5,7 +5,7 @@ library(xml2)
 library(stringr)
 library(stringi)
 
-#pak::pak("sgbstats/parkrunfunctions@initialmarkup")
+#pak::pak("sgbstats/parkrunfunctions")
 library(parkrunfunctions)
 
 ids = tribble(
@@ -95,7 +95,7 @@ get_all_results = function(
     cat(paste(event, eventno, "\n"))
     tryCatch(
       {
-        x = get_result(url = url)
+        x = get_result(url = url)[["results"]]
 
         write.csv(x, file, row.names = F)
         Sys.sleep(25)
