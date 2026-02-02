@@ -5,7 +5,7 @@ library(xml2)
 library(stringr)
 library(stringi)
 
-#pak::pak("sgbstats/parkrunfunctions")
+# pak::pak("sgbstats/parkrunfunctions")
 library(parkrunfunctions)
 
 ids = tribble(
@@ -78,7 +78,7 @@ get_all_results = function(
   results = parkrunner[["results"]]
   for (i in 1:nrow(results)) {
     event = results$event[i]
-    eventno = results$run_number[i]
+    eventno = results$event_no[i]
     url = results$url[i]
     errors = read.csv(log_file, header = T)
 
@@ -122,7 +122,7 @@ for (j in names(all_parkruns)) {
 ls = list.files("data/results", full.names = T)
 for (i in ls) {
   read.csv(i) |>
-    dplyr::select(pos, parkrunner, time) |>
+    dplyr::select(pos, parkrunner, time, id, ag) |>
     write.csv(i, row.names = F)
 }
 
