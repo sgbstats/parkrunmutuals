@@ -63,72 +63,52 @@ for (i in ids$id) {
 
 
 save(all_parkruns, file = "data/all_parkruns.RDa")
-
-
-get_all_results = function(
-  parkrunner,
-  folder = "data/results/",
-  skip_errors = T,
-  log_file = "error_log.txt",
-  ...
-) {
-  if (class(parkrunner) != "parkrun_results") {
-    break
-  }
-  results = parkrunner[["results"]]
-  for (i in 1:nrow(results)) {
-    event = results$event[i]
-    eventno = results$event_no[i]
-    url = results$url[i]
-    errors = read.csv(log_file, header = T)
-
-    if (event %in% errors$event && skip_errors) {
-      next
-    }
-
-    file = paste0(folder, event, eventno, ".csv")
-
-    if (file.exists(file)) {
-      next
-    }
-
-    cat(paste(event, eventno, "\n"))
-    tryCatch(
-      {
-        x = get_result(url = url)[["results"]]
-
-        write.csv(x, file, row.names = F)
-        Sys.sleep(25)
-      },
-      error = function(e) {
-        message(conditionMessage(e))
-        write(paste(event, eventno, sep = ","), file = log_file, append = TRUE)
-      },
-      warning = function(e) {
-        message(conditionMessage(e))
-      }
-    )
-  }
-  return(0)
-}
-
-
 load("data/all_parkruns.RDa")
 
-for (j in names(all_parkruns)) {
-  cat(crayon::blue(paste(j, "\n")))
-  get_all_results(all_parkruns[[j]])
-}
-ls = list.files("data/results", full.names = T)
-for (i in ls) {
-  read.csv(i) |>
-    dplyr::select(pos, parkrunner, time, id, ag) |>
-    write.csv(i, row.names = F)
-}
+folder = "data/results/"
+combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
+  dplyr::select(event, event_no, url) |>
+  dplyr::distinct() |>
+  arrange(event, event_no) |>
+  mutate(file = paste0(folder, event, event_no, ".csv"))
 
+ls = list.files("data/results", full.names = T)
+
+filtered_df <- combined_df |>
+  filter(!file %in% ls)
+
+
+skip_errors = T
+log_file = "error_log.txt"
+
+for (i in 1:nrow(filtered_df)) {
+  errors = read.csv(log_file, header = T)
+  if (filtered_df$event[i] %in% errors$event && skip_errors) {
+    next
+  }
+  cat(paste(filtered_df$event[i], filtered_df$event_no[i], "\n"))
+  tryCatch(
+    {
+      get_result(url = filtered_df$url[i])[["results"]] |>
+        write.csv(filtered_df$file[i], row.names = F)
+      Sys.sleep(25)
+    },
+    error = function(e) {
+      message(conditionMessage(e))
+      write(
+        paste(filtered_df$event[i], filtered_df$event_no[i], sep = ","),
+        file = log_file,
+        append = TRUE
+      )
+    },
+    warning = function(e) {
+      message(conditionMessage(e))
+    }
+  )
+}
 
 all_results = tribble(
-  ~"name" , ~"event" , ~"eventno" , ~"pos" , ~"parkrunner" , ~"time" , ~"short"
+  ~"name" , ~"event" , ~"event_no" , ~"pos" , ~"parkrunner" , ~"time" , ~"short"
 )
 folder = "data/results/"
 for (j in names(all_parkruns)) {
@@ -136,14 +116,15 @@ for (j in names(all_parkruns)) {
   for (i in 1:nrow(all_parkruns[[j]][["results"]])) {
     event = all_parkruns[[j]][["results"]][["event"]][i]
     short = all_parkruns[[j]][["results"]][["short"]][i]
-    eventno = all_parkruns[[j]][["results"]][["run_number"]][i]
-    file = paste0(folder, event, eventno, ".csv")
+    event_no = all_parkruns[[j]][["results"]][["event_no"]][i]
+    file = paste0(folder, event, event_no, ".csv")
     if (file.exists(file)) {
       x = read.csv(file) |>
         mutate(
           name = all_parkruns[[j]][["name"]],
-          event = event,
-          eventno = eventno,
+          event = all_parkruns[[j]][["results"]][["event"]][i],
+          short = all_parkruns[[j]][["results"]][["short"]][i],
+          event_no = all_parkruns[[j]][["results"]][["event_no"]][i]
           #  time = as.numeric(hms::as.hms(time))
         )
     }

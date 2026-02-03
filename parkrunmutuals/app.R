@@ -268,7 +268,7 @@ server <- function(input, output, session) {
 
   parkruns_for_name <- reactive({
     req(input$name)
-    sort(unique((all_results %>% filter(name == input$name))$event))
+    sort(unique((all_results |> filter(name == input$name))$event))
   })
 
   observeEvent(parkruns_for_name(), {
@@ -415,7 +415,7 @@ server <- function(input, output, session) {
 
   get_rivals <- reactive({
     req(input$name2)
-    unique((all_results2 %>% filter(name == input$name2))$parkrunner)
+    unique((all_results2 |> filter(name == input$name2))$parkrunner)
   })
 
   observeEvent(get_rivals(), {
@@ -501,11 +501,11 @@ server <- function(input, output, session) {
         rename("Event" = event, "Number" = eventno)
 
       if (input$filter_wins == "all") {
-        x2 = x1 %>% dplyr::select(-rank)
+        x2 = x1 |> dplyr::select(-rank)
       } else if (input$filter_wins == "y") {
-        x2 = x1 %>% filter(rank == 0) %>% dplyr::select(-rank)
+        x2 = x1 |> filter(rank == 0) |> dplyr::select(-rank)
       } else if (input$filter_wins == "r") {
-        x2 = x1 %>% filter(rank == 1) %>% dplyr::select(-rank)
+        x2 = x1 |> filter(rank == 1) |> dplyr::select(-rank)
       }
 
       x2
