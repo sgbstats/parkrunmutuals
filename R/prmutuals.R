@@ -75,15 +75,15 @@ combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
 ls = list.files("data/results", full.names = T)
 
 filtered_df <- combined_df |>
-  filter(!file %in% ls)
-
+  filter(!file %in% ls) #|>
+#filter(grepl("[O-Z]", substr(event, 1, 1))) # to split the work
 
 skip_errors = T
 log_file = "error_log.txt"
 
 for (i in 1:nrow(filtered_df)) {
   errors = read.csv(log_file, header = T)
-  if (filtered_df$event[i] %in% errors$event && skip_errors) {
+  if (filtered_df$event[i] %in% errors$name && skip_errors) {
     next
   }
   cat(paste(filtered_df$event[i], filtered_df$event_no[i], "\n"))
@@ -91,7 +91,7 @@ for (i in 1:nrow(filtered_df)) {
     {
       get_result(url = filtered_df$url[i])[["results"]] |>
         write.csv(filtered_df$file[i], row.names = F)
-      Sys.sleep(25)
+      Sys.sleep(30)
     },
     error = function(e) {
       message(conditionMessage(e))
