@@ -2,17 +2,29 @@ library(packcircles)
 library(glue)
 library(tidyverse)
 
-bubble = function(var, name_in, prs, others, min = 3, data_in = all_results) {
+bubble = function(
+  var,
+  name_in,
+  prs,
+  others,
+  min = 3,
+  data_in = all_results,
+  ids = names_ids
+) {
   data = data_in |>
-    filter(name == name_in, event %in% prs) %>%
+    filter(name == name_in, event %in% prs) |>
     summarise(
       events = n_distinct(event),
       runs = n(),
-      .by = c("name", "parkrunner")
+      .by = c("name", "parkrunner", "id")
     ) |>
-    mutate(value = .data[[var]]) %>%
+    mutate(value = .data[[var]]) |>
     arrange(-value, -events, -runs) |>
-    filter(row_number() <= 20 | parkrunner %in% others, value >= min)
+    filter(
+      row_number() <= 20 |
+        parkrunner %in% recode_values(others, from = ids$name, to = ids$id),
+      value >= min
+    )
 
   packing <- circleProgressiveLayout(data$value, sizetype = 'area')
   circles <- circleLayoutVertices(packing, npoints = 50)

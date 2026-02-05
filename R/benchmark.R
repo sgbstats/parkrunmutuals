@@ -6,6 +6,15 @@ library(rvest)
 library(xml2)
 library(stringr)
 library(stringi)
+all_results_test = tribble(
+  ~"event" , ~"event_no" , ~"pos" , ~"parkrunner" , ~"id" , ~"time" , ~"short"
+)
+folder = "data/results/"
+ls = list.files("data/results", full.names = T)
+for (i in ls) {
+  all_results_test |>
+    rbind.data.frame(read.csv(i)) -> all_results_test
+}
 
 rbenchmark::benchmark(
   "as_is" = {

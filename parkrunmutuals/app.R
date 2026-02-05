@@ -21,13 +21,16 @@ load("all_results.RDa")
 load("distances.RDa")
 prs_short = parkruns_list$name
 names(prs_short) = parkruns_list$short
+# names_all = all_results |> count(id, parkrunner)
 
-
-all_results2 = all_results %>%
-  count(name, parkrunner) %>%
-  filter(n >= 3) %>%
-  arrange(name, -n) %>%
+all_results2 = names_all |>
+  filter(n >= 3) |>
+  arrange(name, -n) |>
   filter(name != parkrunner)
+
+names_all2 = all_results2 |>
+  summarise(n = sum(n), .by = c(id, parkrunner))
+
 ui <- navbarPage(
   "parkrun mutuals",
   tabPanel(
@@ -105,6 +108,13 @@ ui <- navbarPage(
             placeholder = "Start typing…",
             create = FALSE
           )
+        ),
+        radioButtons(
+          "timeage",
+          "Time or Age Grade",
+          c("Time" = "time", "Age Grade" = "ag"),
+          selected = "time",
+          inline = TRUE
         ),
         radioButtons(
           "filter_wins",
@@ -339,7 +349,8 @@ server <- function(input, output, session) {
         prs = input$parkrun_name,
         others = group_names(),
         min = input$min,
-        data_in = all_results
+        data_in = all_results,
+        ids = names_ids
       )
     },
     height = reactive(ifelse(
@@ -442,7 +453,7 @@ server <- function(input, output, session) {
     req(input$name2)
     req(input$name_h2h)
     sort(unique(
-      (all_results %>%
+      (all_results |>
         filter(name == input$name2, parkrunner == input$name_h2h))$event
     ))
   })
@@ -472,33 +483,74 @@ server <- function(input, output, session) {
     req(input$name_h2h)
     req(input$name2)
     req(input$parkrun_name2)
+    req(input$timeage)
 
-    all_results %>%
+    h2h = all_results |>
       filter(
         name == input$name2,
-        parkrunner %in% c(input$name_h2h, input$name2),
+        id %in%
+          c(
+            recode_values(
+              input$name_h2h,
+              from = names_all2$parkrunner,
+              to = names_all2$id
+            ),
+            recode_values(
+              input$name2,
+              from = names_all2$parkrunner,
+              to = names_all2$id
+            )
+          ),
         event %in% input$parkrun_name2
-      ) %>%
-      dplyr::select(-name) %>%
-      mutate(rank = 2 - rank(pos), .by = c("event", "eventno"))
+      ) |>
+      dplyr::select(-name) |>
+      mutate(
+        rank_time = 2 - rank(pos),
+        rank_ag = 2 - rank(-ag),
+        .by = c("event", "event_no")
+      )
+
+    if (input$timeage == "time") {
+      head_to_head = h2h |> rename(rank = rank_time) |> select(-rank_ag)
+    } else {
+      head_to_head = h2h |> rename(rank = rank_ag) |> select(-rank_time)
+    }
+    head_to_head
   })
 
   output$main2 = renderDataTable(
     {
       req(input$filter_wins)
-      x = head_to_head() %>%
-        dplyr::select(-rank, -pos) %>%
-        pivot_wider(names_from = parkrunner, values_from = time) %>%
-        na.omit() %>%
-        dplyr::select(event, eventno, any_of(c(input$name2, input$name_h2h)))
 
-      x1 = x %>%
+      x = head_to_head() |>
+        dplyr::select(-rank, -pos, -id) |>
+        pivot_wider(names_from = parkrunner, values_from = c("time", "ag")) |>
+        na.omit() |>
+        dplyr::select(
+          event,
+          event_no,
+          any_of(paste(
+            input$timeage,
+            c(input$name2, input$name_h2h),
+            sep = "_"
+          ))
+        )
+
+      x1 = x |>
         merge(
-          head_to_head() %>%
-            filter(parkrunner == input$name_h2h) %>%
-            dplyr::select(event, eventno, rank)
-        ) %>%
-        rename("Event" = event, "Number" = eventno)
+          head_to_head() |>
+            filter(parkrunner == input$name_h2h) |>
+            dplyr::select(event, event_no, rank),
+          sort = FALSE
+        ) |>
+        rename(
+          "Event" = event,
+          "Number" = event_no
+        ) |>
+        rename_with(
+          ~ gsub(paste0(input$timeage, "_"), "", .x),
+          .cols = starts_with(input$timeage)
+        )
 
       if (input$filter_wins == "all") {
         x2 = x1 |> dplyr::select(-rank)
@@ -518,17 +570,17 @@ server <- function(input, output, session) {
   )
 
   output$text = renderUI({
-    x = head_to_head() %>%
-      dplyr::select(-pos, -time) %>%
-      pivot_wider(names_from = parkrunner, values_from = rank) %>%
-      na.omit() %>%
+    x = head_to_head() |>
+      dplyr::select(-pos, -time, -id, -ag) |>
+      pivot_wider(names_from = parkrunner, values_from = rank) |>
+      na.omit() |>
       pivot_longer(
         cols = c(input$name2, input$name_h2h),
         names_to = "parkrunner",
         values_to = "rank"
-      ) %>%
-      summarise(wins = sum(rank), .by = "parkrunner") %>%
-      pivot_wider(names_from = parkrunner, values_from = wins) %>%
+      ) |>
+      summarise(wins = sum(rank), .by = "parkrunner") |>
+      pivot_wider(names_from = parkrunner, values_from = wins) |>
       select(any_of(c(input$name2, input$name_h2h)))
 
     leftwins = x[1, 1]
@@ -547,15 +599,15 @@ server <- function(input, output, session) {
 
   output$mnendy = renderDataTable(
     {
-      events_done2 = events_done %>%
-        filter(name %in% input$name3) %>%
+      events_done2 = events_done |>
+        filter(name %in% input$name3) |>
         pull(event)
 
-      x = distance %>%
-        filter(name.x == input$home) %>%
-        filter(!short %in% events_done2) %>%
-        arrange(miles) %>%
-        mutate(miles = sprintf("%.0f", miles)) %>%
+      x = distance |>
+        filter(name.x == input$home) |>
+        filter(!short %in% events_done2) |>
+        arrange(miles) |>
+        mutate(miles = sprintf("%.0f", miles)) |>
         dplyr::select("Name" = short, "Distance (mi)" = miles)
 
       x

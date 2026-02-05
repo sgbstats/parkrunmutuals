@@ -1,32 +1,61 @@
-input=list()
-input$group="adapat"
-input$name="Sebastian BATE"
-input$name2="Sebastian BATE"
-input$name_h2h="Lawrence BATE"
-input$min=3
-input$eventsruns="runs"
-input$parkruns_names <- sort(unique((all_results %>% filter(name == input$name))$event))
-input$parkrun_name2 <- sort(unique((all_results %>% filter(name == input$name2))$event))
-input$filter_wins="y"
-names <- switch(input$group,
-                "adapat" = c(
-                  "Adam BURNETT", "Alex BUCKLEY", "Andrew CARLSON", "Charlotte TURNER",
-                  "Frankie BALE", "Jonathan O'DONNELL", "Joseph GUNTRIP", "Luke DONALD",
-                  "Max LETCHFIELD", "Michael PETER", "Natalie HARPER", "Philip MOYLE",
-                  "Rachel BROWN", "Rob MOONEY", "Sebastian BATE", "Suzy HILL",
-                  "Tom ALMOND"
-                ),
-                "bate" = c(
-                  "Catherine BATE", "Ewan BATE", "Lawrence BATE", "Sebastian BATE"
-                ),
-                "wnr" = c(
-                  "Alexandra BERESFORD", "Callum SHINGLER", "Colm MULHERN",
-                  "Kirsty WATKINSON", "Gary SCOTT", "Helen ANDREWS",
-                  "Isabel PRECIOUS-BIRDS", "Jon SHAW", "Lindsay HASTON",
-                  "Lynda CLIFFORD", "Paul CLIFFORD", "Paul Thomas MULDOON",
-                  "Sebastian Bate"
-                )
+input = list()
+input$group = "adapat"
+input$name = "Rachel BROWN"
+input$name2 = "Sebastian BATE"
+input$name_h2h = "Lawrence BATE"
+input$min = 3
+input$eventsruns = "runs"
+input$parkruns_names <- sort(unique(
+  (all_results |> filter(name == input$name))$event
+))
+input$parkrun_name2 <- sort(unique(
+  (all_results |> filter(name == input$name2))$event
+))
+input$filter_wins = "y"
+names <- switch(
+  input$group,
+  "adapat" = c(
+    "Adam BURNETT",
+    "Alex BUCKLEY",
+    "Andrew CARLSON",
+    "Charlotte TURNER",
+    "Frankie BALE",
+    "Jonathan O'DONNELL",
+    "Joseph GUNTRIP",
+    "Luke DONALD",
+    "Max LETCHFIELD",
+    "Michael PETER",
+    "Natalie HARPER",
+    "Philip MOYLE",
+    "Rachel BROWN",
+    "Rob MOONEY",
+    "Sebastian BATE",
+    "Suzy HILL",
+    "Tom ALMOND"
+  ),
+  "bate" = c(
+    "Catherine BATE",
+    "Ewan BATE",
+    "Lawrence BATE",
+    "Sebastian BATE"
+  ),
+  "wnr" = c(
+    "Alexandra BERESFORD",
+    "Callum SHINGLER",
+    "Colm MULHERN",
+    "Kirsty WATKINSON",
+    "Gary SCOTT",
+    "Helen ANDREWS",
+    "Isabel PRECIOUS-BIRDS",
+    "Jon SHAW",
+    "Lindsay HASTON",
+    "Lynda CLIFFORD",
+    "Paul CLIFFORD",
+    "Paul Thomas MULDOON",
+    "Sebastian Bate"
+  )
 )
 
-input$name3=c("Sebastian BATE", "Luke DONALD")
-input$home="southmanchester"
+input$name3 = c("Sebastian BATE", "Luke DONALD")
+input$home = "southmanchester"
+input$timeage = "time"

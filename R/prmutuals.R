@@ -60,10 +60,17 @@ for (i in ids$id) {
   all_parkruns[[str_to_lower(str_remove_all(hold$name, "\\s"))]] = hold
   Sys.sleep(25)
 }
-
+all_parkruns[["names_ids"]] <- map_dfr(
+  all_parkruns,
+  ~ tibble(
+    name = .x[["name"]],
+    id = .x[["id"]]
+  )
+)
 
 save(all_parkruns, file = "data/all_parkruns.RDa")
 load("data/all_parkruns.RDa")
+
 
 folder = "data/results/"
 combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
@@ -111,7 +118,7 @@ all_results = tribble(
   ~"name" , ~"event" , ~"event_no" , ~"pos" , ~"parkrunner" , ~"time" , ~"short"
 )
 folder = "data/results/"
-for (j in names(all_parkruns)) {
+for (j in (names(all_parkruns)[names(all_parkruns) != "names_ids"])) {
   cat(crayon::blue(paste(j, "\n")))
   for (i in 1:nrow(all_parkruns[[j]][["results"]])) {
     event = all_parkruns[[j]][["results"]][["event"]][i]
@@ -136,12 +143,18 @@ runners = unique(all_results$name)
 parkruns <- sort(unique(all_results$event))
 events_done = all_results |> count(name, event) |> dplyr::select(-n)
 date = Sys.Date()
+
+names_ids = all_parkruns[["names_ids"]]
+names_all = all_results |>
+  count(name, parkrunner, id)
 save(
   all_results,
   runners,
   parkruns,
   date,
   events_done,
+  names_ids,
+  names_all,
   file = "data/all_results.RDa"
 )
 
