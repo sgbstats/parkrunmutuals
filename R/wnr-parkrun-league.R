@@ -51,32 +51,32 @@ hc2 = hc |>
       paste0("00:", time),
       time
     )),
-    run_date = as.Date(run_date, format = "%d/%m/%Y")
+    event_date = as.Date(event_date, format = "%d/%m/%Y")
   ) |>
   summarise(
     lymepark = min(time[
-      run_date < as.Date("2026-01-01") &
-        run_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-01-01") &
+        event_date >= as.Date("2025-07-01")
     ]),
     wilmslow = min(time[
-      run_date < as.Date("2026-02-01") &
-        run_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-02-01") &
+        event_date >= as.Date("2025-07-01")
     ]),
     salewater = min(time[
-      run_date < as.Date("2026-03-01") &
-        run_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-03-01") &
+        event_date >= as.Date("2025-07-01")
     ]),
     woodbank = min(time[
-      run_date < as.Date("2026-04-01") &
-        run_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-04-01") &
+        event_date >= as.Date("2025-07-01")
     ]),
     wythenshawe = min(time[
-      run_date < as.Date("2026-05-01") &
-        run_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-05-01") &
+        event_date >= as.Date("2025-07-01")
     ]),
     kingswayurmston = min(time[
-      run_date < as.Date("2026-06-01") &
-        run_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-06-01") &
+        event_date >= as.Date("2025-07-01")
     ]),
     .by = c("name", "id")
   ) |>
@@ -85,22 +85,31 @@ hc2 = hc |>
     hc = as_hms(hc),
   )
 
-events = list("lymepark" = c(534:538))
+events = list("lymepark" = c(534:538), "wilmslow" = c(496:499))
 runners = hc2 |> distinct(name, id)
 
 res = tribble(
-  ~"pos" , ~"parkrunner" , ~"time" , ~"id" , ~"event" , ~"event_no"
+  ~"pos" , ~"parkrunner" , ~"time" , ~"ag" , ~"id" , ~"event" , ~"event_no"
 )
 volunteers = tribble(
   ~"parkrunner" , ~"id" , ~"event" , ~"event_no"
 )
+ls = list.files("data/wnr", full.names = F)
 
 for (i in names(events)) {
   for (j in events[[i]]) {
     cat(paste(i, j, "\n"))
     tryCatch(
       {
-        x = get_result(event = i, event_no = j, as_hms = T, as_Date = T)
+        if (glue("{i}{j}.RDa") %in% ls) {
+          load(glue("data/wnr/{i}{j}.RDa"))
+          assign("x", get(glue("{i}{j}")))
+        } else {
+          x = get_result(event = i, event_no = j, as_hms = T, as_Date = T)
+          assign(glue("{i}{j}"), x)
+          save(list = glue("{i}{j}"), file = glue("data/wnr/{i}{j}.RDa"))
+          Sys.sleep(20)
+        }
         res = res |>
           rbind.data.frame(
             x[["results"]] |>
@@ -112,7 +121,6 @@ for (i in names(events)) {
             x[["volunteers"]] |>
               mutate(event = i, event_no = j)
           )
-        Sys.sleep(20)
       },
       error = function(e) {
         conditionMessage(e)
@@ -123,8 +131,6 @@ for (i in names(events)) {
     )
   }
 }
-
-
 eligible_results = runners |>
   merge(
     res |>
@@ -228,10 +234,11 @@ out = runners |>
       sep = "_"
     )))
   ) |>
-  select(name, id, total_pts, contains("lymepark"))
+  select(name, id, total_pts, contains(c("lymepark", "wilmslow"))) |>
+  arrange(-total_pts)
 
 googlesheets4::write_sheet(
-  out |> arrange(-total_pts),
+  out,
   ss = "https://docs.google.com/spreadsheets/d/1tKqy3scDIttZti9yAMZbAtMcukINser_KFlXEYr-Sl8/edit?gid=0#gid=0",
   sheet = "Scores"
 )
