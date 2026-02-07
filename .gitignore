@@ -36,3 +36,4 @@ rsconnect/
 .secrets
 
 junk/
+credentials.json

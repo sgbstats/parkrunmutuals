@@ -31,7 +31,7 @@ hc = data.frame(matrix(ncol = length(col), nrow = 0))
 names(hc) = col
 
 
-for (i in names(all_parkruns)) {
+for (i in names(all_parkruns)[names(all_parkruns) != "names_ids"]) {
   if (all_parkruns[[i]][["id"]] %in% ids$id) {
     hc = hc |>
       rbind.data.frame(
