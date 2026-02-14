@@ -4,7 +4,7 @@ library(stringr)
 library(lubridate)
 library(hms)
 library(glue)
-
+library(googlesheets4)
 load("data/all_parkruns.RDa")
 
 ids = tribble(
@@ -237,7 +237,11 @@ out = runners |>
   select(name, id, total_pts, contains(c("lymepark", "wilmslow"))) |>
   arrange(-total_pts)
 
-googlesheets4::write_sheet(
+
+gs4_auth(
+  path = "credentials.json",
+)
+write_sheet(
   out,
   ss = "https://docs.google.com/spreadsheets/d/1tKqy3scDIttZti9yAMZbAtMcukINser_KFlXEYr-Sl8/edit?gid=0#gid=0",
   sheet = "Scores"
