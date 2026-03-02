@@ -33,22 +33,29 @@ short = stri_trans_general(short, "Latin-ASCII")
 long = stri_trans_general(long, "Latin-ASCII")
 name = stri_trans_general(name, "Latin-ASCII")
 
-parkruns = cbind.data.frame(name, countrycode, coords, short, long) %>%
-  rename("lat" = "2", "lon" = "1") %>%
-  filter(countrycode == 97) %>%
+parkruns = cbind.data.frame(name, countrycode, coords, short, long) |>
+  rename("lat" = "2", "lon" = "1") |>
+  filter(countrycode == 97) |>
   filter(
     !grepl("junior", long),
-    short %notin%
-      c("Cape Pembroke Lighthouse", "Jersey", "Guernsey", "Douglas", "Nobles")
-  ) %>%
-  arrange(name) %>%
+    !short %in%
+      c(
+        "Cape Pembroke Lighthouse",
+        "Jersey",
+        "Guernsey",
+        "Douglas",
+        "Nobles",
+        "Gibralter Botanical Gardens"
+      )
+  ) |>
+  arrange(name) |>
   dplyr::select(-countrycode, -long)
 
-parkruns_list = parkruns %>% dplyr::select(name, short)
+parkruns_list = parkruns |> dplyr::select(name, short)
 
 parkruns2 = cross_join(
-  parkruns %>% dplyr::select(-short),
-  parkruns %>% dplyr::select(-short)
+  parkruns |> dplyr::select(-short),
+  parkruns |> dplyr::select(-short)
 )
 
 dist = numeric(nrow(parkruns2))
@@ -64,9 +71,9 @@ for (i in 1:nrow(parkruns2)) {
   }
 }
 
-distance = cbind.data.frame(parkruns2, dist) %>%
-  select(name.x, name.y, dist) %>%
-  mutate(miles = dist / 1.6) %>%
+distance = cbind.data.frame(parkruns2, dist) |>
+  select(name.x, name.y, dist) |>
+  mutate(miles = dist / 1.6) |>
   merge(parkruns_list, by.x = "name.y", by.y = "name")
 
 

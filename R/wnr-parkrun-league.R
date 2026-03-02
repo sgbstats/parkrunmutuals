@@ -234,7 +234,12 @@ out = runners |>
       sep = "_"
     )))
   ) |>
-  select(name, id, total_pts, contains(c("lymepark", "wilmslow"))) |>
+  select(
+    name,
+    id,
+    total_pts,
+    contains(c("lymepark", "wilmslow", "salewater"))
+  ) |>
   arrange(-total_pts)
 
 
