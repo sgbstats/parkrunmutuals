@@ -85,7 +85,11 @@ hc2 = hc |>
     hc = as_hms(hc),
   )
 
-events = list("lymepark" = c(534:538), "wilmslow" = c(496:499))
+events = list(
+  "lymepark" = c(534:538),
+  "wilmslow" = c(496:499),
+  "salewater" = 350:353
+)
 runners = hc2 |> distinct(name, id)
 
 res = tribble(
