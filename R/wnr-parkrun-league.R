@@ -242,7 +242,7 @@ out = runners |>
     name,
     id,
     total_pts,
-    contains(c("lymepark", "wilmslow", "salewater"))
+    contains(c("lymepark", "wilmslow", "salewater", "woodbank"))
   ) |>
   arrange(-total_pts)
 
