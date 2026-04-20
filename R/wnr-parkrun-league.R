@@ -86,9 +86,10 @@ hc2 = hc |>
   )
 
 events = list(
-  "lymepark" = c(534:538),
-  "wilmslow" = c(496:499),
-  "salewater" = 350:353
+  "lymepark" = 534:538,
+  "wilmslow" = 496:499,
+  "salewater" = 350:353,
+  "woodbank" = 779:782
 )
 runners = hc2 |> distinct(name, id)
 
@@ -123,11 +124,12 @@ for (i in names(events)) {
         volunteers = volunteers |>
           rbind.data.frame(
             x[["volunteers"]] |>
+              select(id, "parkrunner") |>
               mutate(event = i, event_no = j)
           )
       },
       error = function(e) {
-        conditionMessage(e)
+        warning(conditionMessage(e))
       },
       warning = function(e) {
         warning(conditionMessage(e))
