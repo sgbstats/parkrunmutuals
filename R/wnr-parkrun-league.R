@@ -89,7 +89,8 @@ events = list(
   "lymepark" = 534:538,
   "wilmslow" = 496:499,
   "salewater" = 350:353,
-  "woodbank" = 779:782
+  "woodbank" = 779:782,
+"wythenshawe"= 664:668
 )
 runners = hc2 |> distinct(name, id)
 
@@ -244,7 +245,7 @@ out = runners |>
     name,
     id,
     total_pts,
-    contains(c("lymepark", "wilmslow", "salewater", "woodbank"))
+    contains(c("lymepark", "wilmslow", "salewater", "woodbank", "wythenshawe"))
   ) |>
   arrange(-total_pts)
 
