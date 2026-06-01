@@ -166,7 +166,7 @@ ui <- navbarPage(
             "Philip MOYLE",
             "Rachel BROWN",
             "Rob MOONEY",
-            "Sebastian BATE",
+            "Seb BATE",
             "Suzy HILL",
             "Tom ALMOND",
             "Catherine BATE",
@@ -184,10 +184,11 @@ ui <- navbarPage(
             "Lynda CLIFFORD",
             "Paul CLIFFORD",
             "Paul Thomas MULDOON",
+            "Andrew PIMBLOTT",
+            "Sarah HARRIS",
             "Bob BAYMAN",
             "Brita BAYMAN",
             "Helena ROBINSON",
-            "Lawrence BATE",
             "Niamh CONROY VAN LEEUWEN"
           ),
           selected = NULL,
@@ -237,7 +238,7 @@ server <- function(input, output, session) {
         "Philip MOYLE",
         "Rachel BROWN",
         "Rob MOONEY",
-        "Sebastian BATE",
+        "Seb BATE",
         "Suzy HILL",
         "Tom ALMOND"
       ),
@@ -245,7 +246,7 @@ server <- function(input, output, session) {
         "Catherine BATE",
         "Ewan BATE",
         "Lawrence BATE",
-        "Sebastian BATE"
+        "Seb BATE"
       ),
       "wnr" = c(
         "Alexandra BERESFORD",
@@ -260,7 +261,9 @@ server <- function(input, output, session) {
         "Lynda CLIFFORD",
         "Paul CLIFFORD",
         "Paul Thomas MULDOON",
-        "Sebastian Bate"
+        "Andrew PIMBLOTT",
+        "Sarah HARRIS",
+        "Seb BATE"
       ),
       "others" = c(
         "Bob BAYMAN",
@@ -385,7 +388,7 @@ server <- function(input, output, session) {
         "Philip MOYLE",
         "Rachel BROWN",
         "Rob MOONEY",
-        "Sebastian BATE",
+        "Seb BATE",
         "Suzy HILL",
         "Tom ALMOND"
       ),
@@ -393,7 +396,7 @@ server <- function(input, output, session) {
         "Catherine BATE",
         "Ewan BATE",
         "Lawrence BATE",
-        "Sebastian BATE"
+        "Seb BATE"
       ),
       "wnr" = c(
         "Alexandra BERESFORD",
@@ -408,7 +411,9 @@ server <- function(input, output, session) {
         "Lynda CLIFFORD",
         "Paul CLIFFORD",
         "Paul Thomas MULDOON",
-        "Sebastian Bate"
+        "Andrew PIMBLOTT",
+        "Sarah HARRIS",
+        "Seb BATE"
       ),
       "others" = c(
         "Bob BAYMAN",
