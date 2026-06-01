@@ -74,7 +74,7 @@ hc2 = hc |>
       event_date < as.Date("2026-05-01") &
         event_date >= as.Date("2025-07-01")
     ]),
-    kingswayurmston = min(time[
+    kingswayparkurmston = min(time[
       event_date < as.Date("2026-06-01") &
         event_date >= as.Date("2025-07-01")
     ]),
@@ -90,7 +90,9 @@ events = list(
   "wilmslow" = 496:499,
   "salewater" = 350:353,
   "woodbank" = 779:782,
-"wythenshawe"= 664:668
+"wythenshawe"= 664:668,
+"kingswayparkurmston"=6:9
+
 )
 runners = hc2 |> distinct(name, id)
 
@@ -235,7 +237,7 @@ out = runners |>
         "salewater",
         "woodbank",
         "wythenshawe",
-        "kingswayurmston"
+        "kingswayparkrunurmston"
       ),
       paste,
       sep = "_"
@@ -245,7 +247,7 @@ out = runners |>
     name,
     id,
     total_pts,
-    contains(c("lymepark", "wilmslow", "salewater", "woodbank", "wythenshawe"))
+    contains(c("lymepark", "wilmslow", "salewater", "woodbank", "wythenshawe", "kingsway"))
   ) |>
   arrange(-total_pts)
 
