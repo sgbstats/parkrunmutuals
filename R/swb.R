@@ -149,12 +149,13 @@ for (i in parkrunsuk) {
 
         swb = y |>
           pull(secs) |>
-          coupon_event_time()
+          coupon_event_time() |>
+          rename("events" = "time", "swb" = "event")
 
         n_events = y |>
-          head(swb$time) |>
-          summarise(n_events = n_distinct(event), done = n()) |>
-          mutate(tq = n_events / done) |>
+          head(swb$events) |>
+          summarise(distinct_events = n_distinct(event), done = n()) |>
+          mutate(tq = distinct_events / done) |>
           select(-done)
         id_done <- id_done |>
           rbind(
@@ -165,13 +166,6 @@ for (i in parkrunsuk) {
               swb,
               n_events
             )
-          ) |>
-          select(
-            id,
-            "events" = time,
-            "swb" = event,
-            "distinct_events" = n_events,
-            tq
           )
 
         save(id_done, file = "data/swb_id.RDa")
@@ -184,6 +178,7 @@ for (i in parkrunsuk) {
         error_counter <<- error_counter + 1
 
         if (error_counter >= 10) {
+          cat(paste0("Error for ID: ", j, " - ", conditionMessage(e), "\n"))
           stop("10 consecutive errors — stopping execution")
         }
       }

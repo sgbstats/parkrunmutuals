@@ -78,10 +78,15 @@ combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
   arrange(event, event_no) |>
   mutate(file = paste0(folder, event, event_no, ".csv"))
 
-ls = list.files("data/results", full.names = T)
+# x2=all_parkruns[names(all_parkruns) == "sebbate"]
+# combined_df2 <- purrr::map_df(x2, ~ .x[["results"]]) |>
+#   dplyr::select(event, event_no, url) |>
+#   dplyr::distinct() |>
+#   arrange(event, event_no) |>
+#   mutate(file = paste0(folder, event, event_no, ".csv"))
 
 filtered_df <- combined_df |>
-  filter(!file %in% ls) #|>
+  filter_out(file %in% ls) #|>
 #filter(grepl("[O-Z]", substr(event, 1, 1))) # to split the work
 
 skip_errors = T
