@@ -99,10 +99,10 @@ if (file.exists("data/swb_id.RDa")) {
 error_counter <- 0
 
 for (i in parkrunsuk) {
+  crayon::red(cat(paste0(i, "\n")))
   if (i %in% pr_done) {
     next
   }
-  cat(paste0(i, "\n"))
 
   tryCatch(
     {
@@ -138,7 +138,7 @@ for (i in parkrunsuk) {
 
         y = x[["results"]] |>
           mutate(event_date = as.Date(event_date)) |>
-          arrange(desc(event_date)) |>
+          arrange(event_date) |>
           mutate(
             secs = as.numeric(substr(
               time,
@@ -184,6 +184,6 @@ for (i in parkrunsuk) {
       }
     )
   }
-
+  pr_done = c(pr_done, i)
   save(pr_done, file = "data/pr_done.RDa")
 }

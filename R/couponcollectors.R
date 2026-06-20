@@ -27,7 +27,6 @@ coupon_event_time <- function(vec) {
   data.frame("event" = 0L, "time" = n)
 }
 
-
 dist = c(
   sample(150:199, 584, replace = T),
   sample(200:249, 340, replace = T),
@@ -56,40 +55,59 @@ x = survival::survfit(
   data = out |> slice_sample(n = 5e3, replace = F)
 )
 x
+
+
+load("data/swb_id.RDa")
+fit = survival::survfit(
+  Surv(events, swb) ~ 1,
+  data = id_done
+)
+fit
 library(survival)
 library(ggsurvfit)
 library(ggplot2)
 
 # use existing fit if present; otherwise recreate from `out`
 if (!exists("fit")) {
-  fit <- survfit(Surv(time, event) ~ 1, data = out)
+  fit <- survfit(Surv(events, swb) ~ 1, data = id_done)
 }
-
-# produce the KM plot (returns a ggplot object)
-p <- ggsurvfit::ggsurvfit(fit) +
-  labs(title = "Kaplan–Meier curve", x = "Time", y = "Survival probability") +
-  theme_minimal()
-
 # compute median time (first time survival <= 0.5); handle "median not reached"
 med_time <- {
   idx <- which(fit$surv <= 0.5)
   if (length(idx)) fit$time[min(idx)] else NA_real_
 }
 
-p_med <- p
+# produce the KM plot (returns a ggplot object)
+
+# build step data from the survfit
+s <- summary(fit)
+df_fit <- tibble(time = c(0, s$time), surv = c(1, s$surv)) |>
+  mutate(event = 1 - surv)
+
+# plot upward curve
+p_up <- ggplot(df_fit, aes(x = time, y = event)) +
+  geom_step() +
+  labs(
+    title = "SWB (cumulative event probability)",
+    x = "Time",
+    y = "Cumulative probability"
+  ) +
+  theme_minimal()
+
+# add median lines/label (same med_time as before)
 if (!is.na(med_time)) {
-  p_med <- p_med +
+  p_up <- p_up +
     ggplot2::geom_vline(
       xintercept = med_time,
       linetype = "dashed",
       color = "red",
-      size = 0.6
+      linewidth = 0.6
     ) +
     ggplot2::geom_hline(
       yintercept = 0.5,
       linetype = "dashed",
       color = "red",
-      size = 0.6
+      linewidth = 0.6
     ) +
     ggplot2::annotate(
       "text",
@@ -102,8 +120,11 @@ if (!is.na(med_time)) {
       size = 3
     )
 } else {
-  p_med <- p_med +
-    ggplot2::labs(subtitle = "Median not reached (survival > 0.5)")
+  p_up <- p_up + ggplot2::labs(subtitle = "Median not reached (survival > 0.5)")
 }
 
-p_med
+
+p_up
+
+
+coxph(Surv(events, swb) ~ tq, data = id_done)
