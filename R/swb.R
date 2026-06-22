@@ -99,7 +99,7 @@ if (file.exists("data/swb_id.RDa")) {
 error_counter <- 0
 
 for (i in parkrunsuk) {
-  crayon::red(cat(paste0(i, "\n")))
+  cat(crayon::red(paste0(i, "\n")))
   if (i %in% pr_done) {
     next
   }
@@ -113,6 +113,7 @@ for (i in parkrunsuk) {
         filter(finishes >= 150)
 
       error_counter <- 0
+      Sys.sleep(10)
     },
     error = function(e) {
       error_counter <<- error_counter + 1
