@@ -104,27 +104,33 @@ for (i in parkrunsuk) {
     next
   }
 
-  tryCatch(
+  # try to get df; on error return NULL so we can `next` from the outer for-loop
+  df <- tryCatch(
     {
-      df <- get_result(
+      get_result(
         glue("https://www.parkrun.org.uk/{i}/results/2026-06-13/"),
         extra_data = TRUE
       )[["results"]] |>
         filter(finishes >= 150)
-
-      error_counter <- 0
-      Sys.sleep(10)
     },
     error = function(e) {
       error_counter <<- error_counter + 1
-
       if (error_counter >= 10) {
         stop("10 consecutive errors — stopping execution")
       }
-
-      next
+      NULL
     }
   )
+
+  if (is.null(df)) {
+    pr_done = c(pr_done, i)
+    save(pr_done, file = "data/pr_done.RDa")
+    next
+  }
+
+  # success: reset counter and pause
+  error_counter <- 0
+  Sys.sleep(10)
 
   for (j in df$id) {
     if (j %in% id_done$id) {
