@@ -52,7 +52,7 @@ for (i in 1:63831) {
 
 x = survival::survfit(
   Surv(time, event) ~ 1,
-  data = out |> slice_sample(n = 5e3, replace = F)
+  data = out # |> slice_sample(n = 5e3, replace = F)
 )
 x
 
@@ -89,10 +89,11 @@ p_up <- ggplot(df_fit, aes(x = time, y = event)) +
   geom_step() +
   labs(
     title = "SWB (cumulative event probability)",
-    x = "Time",
+    x = "Events",
     y = "Cumulative probability"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent)
 
 # add median lines/label (same med_time as before)
 if (!is.na(med_time)) {
