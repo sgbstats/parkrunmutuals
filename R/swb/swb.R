@@ -31,28 +31,28 @@ coupon_event_time <- function(vec) {
 }
 
 
-parkrunsall = RJSONIO::fromJSON("https://images.parkrun.com/events.json")
-nevents = length(parkrunsall$events$features)
+parkrunsall <- RJSONIO::fromJSON("https://images.parkrun.com/events.json")
+nevents <- length(parkrunsall$events$features)
 
-short = character(nevents)
-long = character(nevents)
-location = character(nevents)
-countrycode = numeric(nevents)
-name = numeric(nevents)
-coords = matrix(0, ncol = 2, nrow = nevents)
+short <- character(nevents)
+long <- character(nevents)
+location <- character(nevents)
+countrycode <- numeric(nevents)
+name <- numeric(nevents)
+coords <- matrix(0, ncol = 2, nrow = nevents)
 
 
 for (i in 1:nevents) {
-  name[i] = parkrunsall$events$features[[i]]$properties$eventname
-  short[i] = parkrunsall$events$features[[i]]$properties$EventShortName
-  long[i] = parkrunsall$events$features[[i]]$properties$EventLongName
-  countrycode[i] = parkrunsall$events$features[[i]]$properties$countrycode
-  coords[i, ] = parkrunsall$events$features[[i]]$geometry$coordinates
-  location[i] = parkrunsall$events$features[[i]]$properties$EventLocation
+  name[i] <- parkrunsall$events$features[[i]]$properties$eventname
+  short[i] <- parkrunsall$events$features[[i]]$properties$EventShortName
+  long[i] <- parkrunsall$events$features[[i]]$properties$EventLongName
+  countrycode[i] <- parkrunsall$events$features[[i]]$properties$countrycode
+  coords[i, ] <- parkrunsall$events$features[[i]]$geometry$coordinates
+  location[i] <- parkrunsall$events$features[[i]]$properties$EventLocation
 }
 
 
-parkrunsuk = cbind.data.frame(
+parkrunsuk <- cbind.data.frame(
   short,
   long,
   countrycode,
@@ -85,13 +85,13 @@ parkrunsuk = cbind.data.frame(
 if (file.exists("data/pr_done.RDa")) {
   load("data/pr_done.RDa")
 } else {
-  pr_done = character(0)
+  pr_done <- character(0)
 }
 
 if (file.exists("data/swb_id.RDa")) {
   load("data/swb_id.RDa")
 } else {
-  id_done = tribble(
+  id_done <- tribble(
     ~"id" , ~"events" , ~"swb" , ~"distinct_events" , ~"tq"
   )
 }
@@ -123,7 +123,7 @@ for (i in parkrunsuk) {
   )
 
   if (is.null(df)) {
-    pr_done = c(pr_done, i)
+    pr_done <- c(pr_done, i)
     save(pr_done, file = "data/pr_done.RDa")
     next
   }
@@ -143,7 +143,7 @@ for (i in parkrunsuk) {
       {
         x <- get_all_runs(j, as_Date = TRUE, as_hms = FALSE)
 
-        y = x[["results"]] |>
+        y <- x[["results"]] |>
           mutate(event_date = as.Date(event_date)) |>
           arrange(event_date) |>
           mutate(
@@ -154,12 +154,12 @@ for (i in parkrunsuk) {
             ))
           )
 
-        swb = y |>
+        swb <- y |>
           pull(secs) |>
           coupon_event_time() |>
           rename("events" = "time", "swb" = "event")
 
-        n_events = y |>
+        n_events <- y |>
           head(swb$events) |>
           summarise(distinct_events = n_distinct(event), done = n()) |>
           mutate(tq = distinct_events / done) |>
@@ -191,6 +191,6 @@ for (i in parkrunsuk) {
       }
     )
   }
-  pr_done = c(pr_done, i)
+  pr_done <- c(pr_done, i)
   save(pr_done, file = "data/pr_done.RDa")
 }

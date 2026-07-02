@@ -7,33 +7,34 @@ library(glue)
 library(googlesheets4)
 load("data/all_parkruns.RDa")
 
-ids = tribble(
-  ~id       ,
+ids <- tribble(
+  ~id        ,
 
-  '493595'  , # Seb
+  '493595'   , # Seb
 
-  "42804"   , #paul M
-  "9334474" , #Alex behcford
-  "6391679" , #kirsty
-  "7433025" , #Helen
-  "4301378" , #Lindsay
-  "4051781" , #Callum
-  "16568"   , #Paul C
-  "16569"   , #Lynda
-  "3629365" , #Isabel
-
-  "1166640" , #gary
-  "81779"   , #jon
+  "42804"    , #paul M
+  "9334474"  , #Alex
+  "6391679"  , #kirsty
+  "7433025"  , #Helen
+  "4301378"  , #Lindsay
+  "4051781"  , #Callum
+  "16568"    , #Paul C
+  "16569"    , #Lynda
+  "3629365"  , #Isabel
+  "4228499"  , #sarah
+  "10000894" , #andrew
+  "1166640"  , #gary
+  "81779"    , #jon
 )
 
-col = c(names(all_parkruns[["sebastianbate"]][["results"]]), "id", "name")
-hc = data.frame(matrix(ncol = length(col), nrow = 0))
-names(hc) = col
+col <- c(names(all_parkruns[["sebbate"]][["results"]]), "id", "name")
+hc <- data.frame(matrix(ncol = length(col), nrow = 0))
+names(hc) <- col
 
 
 for (i in names(all_parkruns)[names(all_parkruns) != "names_ids"]) {
   if (all_parkruns[[i]][["id"]] %in% ids$id) {
-    hc = hc |>
+    hc <- hc |>
       rbind.data.frame(
         all_parkruns[[i]][["results"]] |>
           mutate(
@@ -44,7 +45,7 @@ for (i in names(all_parkruns)[names(all_parkruns) != "names_ids"]) {
   }
 }
 
-hc2 = hc |>
+hc2 <- hc |>
   mutate(
     time = as_hms(if_else(
       stringr::str_length(time) == 5,
@@ -54,29 +55,29 @@ hc2 = hc |>
     event_date = as.Date(event_date, format = "%d/%m/%Y")
   ) |>
   summarise(
-    lymepark = min(time[
-      event_date < as.Date("2026-01-01") &
-        event_date >= as.Date("2025-07-01")
+    peel = min(time[
+      event_date < as.Date("2026-07-01") &
+        event_date >= as.Date("2026-01-01")
     ]),
-    wilmslow = min(time[
-      event_date < as.Date("2026-02-01") &
-        event_date >= as.Date("2025-07-01")
+    penningtonflash = min(time[
+      event_date < as.Date("2026-08-01") &
+        event_date >= as.Date("2026-01-01")
     ]),
-    salewater = min(time[
-      event_date < as.Date("2026-03-01") &
-        event_date >= as.Date("2025-07-01")
+    alexandra = min(time[
+      event_date < as.Date("2026-09-01") &
+        event_date >= as.Date("2026-01-01")
     ]),
-    woodbank = min(time[
-      event_date < as.Date("2026-04-01") &
-        event_date >= as.Date("2025-07-01")
+    fletchermoss = min(time[
+      event_date < as.Date("2026-10-01") &
+        event_date >= as.Date("2026-01-01")
     ]),
     wythenshawe = min(time[
-      event_date < as.Date("2026-05-01") &
-        event_date >= as.Date("2025-07-01")
+      event_date < as.Date("2026-11-01") &
+        event_date >= as.Date("2026-01-01")
     ]),
-    kingswayparkurmston = min(time[
-      event_date < as.Date("2026-06-01") &
-        event_date >= as.Date("2025-07-01")
+    southmanchester = min(time[
+      event_date < as.Date("2026-12-01") &
+        event_date >= as.Date("2026-01-01")
     ]),
     .by = c("name", "id")
   ) |>
@@ -85,23 +86,18 @@ hc2 = hc |>
     hc = as_hms(hc),
   )
 
-events = list(
-  "lymepark" = 534:538,
-  "wilmslow" = 496:499,
-  "salewater" = 350:353,
-  "woodbank" = 779:782,
-  "wythenshawe" = 664:668,
-  "kingswayparkurmston" = 6:9
+events <- list(
+  "peel" = 232:235
 )
-runners = hc2 |> distinct(name, id)
+runners <- hc2 |> distinct(name, id)
 
-res = tribble(
+res <- tribble(
   ~"pos" , ~"parkrunner" , ~"time" , ~"ag" , ~"id" , ~"event" , ~"event_no"
 )
-volunteers = tribble(
+volunteers <- tribble(
   ~"parkrunner" , ~"id" , ~"event" , ~"event_no"
 )
-ls = list.files("data/wnr", full.names = F)
+ls <- list.files("data/wnr", full.names = F)
 
 for (i in names(events)) {
   for (j in events[[i]]) {
@@ -112,18 +108,18 @@ for (i in names(events)) {
           load(glue("data/wnr/{i}{j}.RDa"))
           assign("x", get(glue("{i}{j}")))
         } else {
-          x = get_result(event = i, event_no = j, as_hms = T, as_Date = T)
+          x <- get_result(event = i, event_no = j, as_hms = T, as_Date = T)
           assign(glue("{i}{j}"), x)
           save(list = glue("{i}{j}"), file = glue("data/wnr/{i}{j}.RDa"))
           Sys.sleep(20)
         }
-        res = res |>
+        res <- res |>
           rbind.data.frame(
             x[["results"]] |>
               mutate(event = i, event_no = j)
           )
 
-        volunteers = volunteers |>
+        volunteers <- volunteers |>
           rbind.data.frame(
             x[["volunteers"]] |>
               select(id, "parkrunner") |>
@@ -139,13 +135,13 @@ for (i in names(events)) {
     )
   }
 }
-eligible_results = runners |>
+eligible_results <- runners |>
   merge(
     res |>
       select(id, time, event, event_no),
     all.x = T
   )
-vol_pts = volunteers |>
+vol_pts <- volunteers |>
   filter(id %in% ids$id) |>
   select(id, event, event_no) |>
   merge(eligible_results |> select(id, time, event, event_no), all.x = T) |>
@@ -153,7 +149,7 @@ vol_pts = volunteers |>
   summarise(pts = max(pts, na.rm = T), .by = c("id", "event"))
 
 
-time_diff = eligible_results |>
+time_diff <- eligible_results |>
   merge(
     hc2,
     all.x = T
@@ -162,14 +158,14 @@ time_diff = eligible_results |>
   slice_min(diff, by = c("id", "event"), with_ties = F) |>
   select(id, event, diff, time) |>
   arrange(diff) |>
-  mutate(pts = if_else(is.na(diff), 0, 13 - row_number()), .by = c("event")) |>
+  mutate(pts = if_else(is.na(diff), 0, 15 - row_number()), .by = c("event")) |>
   mutate(diff = as.character(as_hms(diff)), time = as.character(as_hms(time)))
 
-points = vol_pts |>
+points <- vol_pts |>
   rbind(time_diff |> select(id, event, pts)) |>
   summarise(total_pts = sum(pts), .by = "id")
 
-out = runners |>
+out <- runners |>
   merge(points) |>
   merge(
     hc2 |>
@@ -231,12 +227,12 @@ out = runners |>
     any_of(as.vector(outer(
       c("hc", "time", "diff", "pts", "vol"),
       c(
-        "lymepark",
-        "wilmslow",
-        "salewater",
-        "woodbank",
+        "peel",
+        "penningtonflash",
+        "alexandra",
+        "fletchermoss",
         "wythenshawe",
-        "kingswayparkurmston"
+        "southmanchester"
       ),
       paste,
       sep = "_"
@@ -247,12 +243,7 @@ out = runners |>
     id,
     total_pts,
     contains(c(
-      "lymepark",
-      "wilmslow",
-      "salewater",
-      "woodbank",
-      "wythenshawe",
-      "kingsway"
+      "peel"
     ))
   ) |>
   arrange(-total_pts)
@@ -263,6 +254,6 @@ gs4_auth(
 )
 write_sheet(
   out,
-  ss = "https://docs.google.com/spreadsheets/d/1tKqy3scDIttZti9yAMZbAtMcukINser_KFlXEYr-Sl8/edit?gid=0#gid=0",
+  ss = "https://docs.google.com/spreadsheets/d/1mOPeM1BA2i5gw7tNMn7geTt_yLC4ngjFw2uh6zWl4wE/edit?usp=sharing",
   sheet = "Scores"
 )

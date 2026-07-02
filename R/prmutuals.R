@@ -8,7 +8,7 @@ library(stringi)
 # pak::pak("sgbstats/parkrunfunctions")
 library(parkrunfunctions)
 
-ids = tribble(
+ids <- tribble(
   ~id        ,
   '7232608'  , # Adam
   '4087050'  , # Alex
@@ -52,11 +52,11 @@ ids = tribble(
   "5401482"  , #britt
 )
 
-all_parkruns = list()
+all_parkruns <- list()
 for (i in ids$id) {
-  hold = parkrunfunctions::get_all_runs(i)
+  hold <- parkrunfunctions::get_all_runs(i)
   cat(paste(hold$name, "\n"))
-  all_parkruns[[str_to_lower(str_remove_all(hold$name, "\\s"))]] = hold
+  all_parkruns[[str_to_lower(str_remove_all(hold$name, "\\s"))]] <- hold
   Sys.sleep(25)
 }
 all_parkruns[["names_ids"]] <- map_dfr(
@@ -71,7 +71,7 @@ save(all_parkruns, file = "data/all_parkruns.RDa")
 load("data/all_parkruns.RDa")
 
 
-folder = "data/results/"
+folder <- "data/results/"
 combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
   dplyr::select(event, event_no, url) |>
   dplyr::distinct() |>
@@ -85,15 +85,16 @@ combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
 #   arrange(event, event_no) |>
 #   mutate(file = paste0(folder, event, event_no, ".csv"))
 
+ls <- list.files("data/results", full.names = T)
 filtered_df <- combined_df |>
   filter_out(file %in% ls) #|>
 #filter(grepl("[O-Z]", substr(event, 1, 1))) # to split the work
 
-skip_errors = T
-log_file = "error_log.txt"
+skip_errors <- T
+log_file <- "error_log.txt"
 
 for (i in 1:nrow(filtered_df)) {
-  errors = read.csv(log_file, header = T)
+  errors <- read.csv(log_file, header = T)
   if (filtered_df$event[i] %in% errors$name && skip_errors) {
     next
   }
@@ -118,38 +119,78 @@ for (i in 1:nrow(filtered_df)) {
   )
 }
 
-all_results = tribble(
+all_results <- tribble(
   ~"name" , ~"event" , ~"event_no" , ~"pos" , ~"parkrunner" , ~"time" , ~"short"
 )
-folder = "data/results/"
-for (j in (names(all_parkruns)[names(all_parkruns) != "names_ids"])) {
-  cat(crayon::blue(paste(j, "\n")))
-  for (i in 1:nrow(all_parkruns[[j]][["results"]])) {
-    event = all_parkruns[[j]][["results"]][["event"]][i]
-    short = all_parkruns[[j]][["results"]][["short"]][i]
-    event_no = all_parkruns[[j]][["results"]][["event_no"]][i]
-    file = paste0(folder, event, event_no, ".csv")
-    if (file.exists(file)) {
-      x = read.csv(file) |>
-        mutate(
-          name = all_parkruns[[j]][["name"]],
-          event = all_parkruns[[j]][["results"]][["event"]][i],
-          short = all_parkruns[[j]][["results"]][["short"]][i],
-          event_no = all_parkruns[[j]][["results"]][["event_no"]][i]
-          #  time = as.numeric(hms::as.hms(time))
-        )
+folder <- "data/results/"
+# r
+library(furrr)
+library(purrr)
+library(dplyr)
+library(readr)
+
+# choose workers
+future::plan(multisession, workers = max(1, parallel::detectCores() - 1))
+
+names_list <- names(all_parkruns)[names(all_parkruns) != "names_ids"]
+
+all_results_list <- future_map(
+  names_list,
+  function(j) {
+    res <- all_parkruns[[j]][["results"]]
+    if (nrow(res) == 0) {
+      return(tibble())
     }
-    all_results = all_results |> rbind.data.frame(x)
-  }
-}
 
-runners = unique(all_results$name)
+    files <- paste0(folder, res$event, res$event_no, ".csv")
+
+    future_map2_dfr(
+      files,
+      seq_len(nrow(res)),
+      function(file, idx) {
+        if (!file.exists(file)) {
+          return(tibble())
+        }
+        # Option A: force pos as numeric while reading
+        read_csv(
+          file,
+          col_types = cols(pos = col_integer(), id = col_integer()),
+          show_col_types = FALSE
+        ) |>
+          mutate(
+            name = all_parkruns[[j]][["name"]],
+            event = res$event[idx],
+            short = res$short[idx],
+            event_no = res$event_no[idx]
+          )
+
+        # Option B: coerce after reading (keeps readr auto-detect then fixes)
+        read_csv(file, show_col_types = FALSE) |>
+          mutate(
+            pos = as.integer(pos),
+            id = as.integer(id),
+            name = all_parkruns[[j]][["name"]],
+            event = res$event[idx],
+            short = res$short[idx],
+            event_no = res$event_no[idx]
+          )
+      },
+      .options = furrr_options(seed = NULL)
+    )
+  },
+  .options = furrr_options(seed = NULL)
+)
+
+all_results <- bind_rows(all_results_list)
+
+
+runners <- unique(all_results$name)
 parkruns <- sort(unique(all_results$event))
-events_done = all_results |> count(name, event) |> dplyr::select(-n)
-date = Sys.Date()
+events_done <- all_results |> count(name, event) |> dplyr::select(-n)
+date <- Sys.Date()
 
-names_ids = all_parkruns[["names_ids"]]
-names_all = all_results |>
+names_ids <- all_parkruns[["names_ids"]]
+names_all <- all_results |>
   count(name, parkrunner, id)
 save(
   all_results,

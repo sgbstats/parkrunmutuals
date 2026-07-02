@@ -27,7 +27,7 @@ coupon_event_time <- function(vec) {
   data.frame("event" = 0L, "time" = n)
 }
 
-dist = c(
+dist <- c(
   sample(150:199, 584, replace = T),
   sample(200:249, 340, replace = T),
   sample(250:299, 231, replace = T),
@@ -40,17 +40,17 @@ dist = c(
   sample(700:799, 1, replace = T)
 )
 
-out = tribble(
+out <- tribble(
   ~"event" , ~"time"
 )
 for (i in 1:63831) {
-  out = out |>
+  out <- out |>
     rbind.data.frame(
       coupon_event_time(sample(0:59, sample(dist, 1), replace = T))
     )
 }
 
-x = survival::survfit(
+x <- survival::survfit(
   Surv(time, event) ~ 1,
   data = out # |> slice_sample(n = 5e3, replace = F)
 )
@@ -58,7 +58,7 @@ x
 
 
 load("data/swb_id.RDa")
-fit = survival::survfit(
+fit <- survival::survfit(
   Surv(events, swb) ~ 1,
   data = id_done
 )

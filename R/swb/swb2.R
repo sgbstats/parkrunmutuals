@@ -3,7 +3,7 @@ library(parkrunfunctions)
 library(glue)
 load("data/pr_done.RDa")
 
-out = tribble(
+out <- tribble(
   ~"name" , ~"all" , ~"finishes60_150" , ~"finishes150"
 )
 for (i in pr_done) {
@@ -25,7 +25,7 @@ for (i in pr_done) {
       data.frame(name = i, all = 0, finishes60_150 = 0, finishes150 = 0)
     }
   )
-  out = out |> rbind(df)
+  out <- out |> rbind(df)
   Sys.sleep(23)
 }
 
