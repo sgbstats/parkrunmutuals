@@ -158,7 +158,8 @@ time_diff <- eligible_results |>
   slice_min(diff, by = c("id", "event"), with_ties = F) |>
   select(id, event, diff, time) |>
   arrange(diff) |>
-  mutate(pts = if_else(is.na(diff), 0, 15 - row_number()), .by = c("event")) |>
+  mutate(pts = if_else(is.na(diff), 0, 11 - row_number()), .by = c("event")) |>
+  mutate(pts = if_else(is.na(diff), 0, max(pts, 3)), .by = c("event", "id")) |>
   mutate(diff = as.character(as_hms(diff)), time = as.character(as_hms(time)))
 
 points <- vol_pts |>
