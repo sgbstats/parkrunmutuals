@@ -87,6 +87,7 @@ combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
 #   mutate(file = paste0(folder, event, event_no, ".csv"))
 
 ls <- list.files("data/results", full.names = T)
+
 filtered_df <- combined_df |>
   filter_out(file %in% ls) #|>
 #filter(grepl("[O-Z]", substr(event, 1, 1))) # to split the work
@@ -130,8 +131,13 @@ library(purrr)
 library(dplyr)
 library(readr)
 
-# choose workers
-future::plan(multisession, workers = max(1, parallel::detectCores() - 1))
+library(future)
+library(parallelly)
+
+future::plan(
+  multisession,
+  workers = availableCores()
+)
 
 names_list <- names(all_parkruns)[names(all_parkruns) != "names_ids"]
 
