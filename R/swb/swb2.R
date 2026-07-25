@@ -29,4 +29,4 @@ for (i in pr_done) {
   Sys.sleep(23)
 }
 
-save("finsiher_no" = out, file = "data/finishes.RDa")
+save(out, file = "data/finishes.RDa")

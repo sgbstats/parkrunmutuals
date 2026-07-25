@@ -1,13 +1,14 @@
-all_results %>%
+library(dplyr)
+all_results |>
   summarise(people = n_distinct(parkrunner) - 1, .by = "name")
 
-distict_parkrunners <- all_results %>%
+distict_parkrunners <- all_results |>
   summarise(
     events = n_distinct(event),
     runners = n(),
     .by = c("name", "parkrunner")
-  ) %>%
-  filter(name != parkrunner) %>%
+  ) |>
+  filter(name != parkrunner) |>
   arrange(-events)
 
 
@@ -38,33 +39,33 @@ gm <- c(
   "Worsley Woods"
 )
 
-distict_parkrunners_not_gm <- all_results %>%
-  filter(!event %in% gm) %>%
-  summarise(event = n_distinct(event), .by = c("name", "parkrunner")) %>%
-  filter(name != parkrunner) %>%
+distict_parkrunners_not_gm <- all_results |>
+  filter(!event %in% gm) |>
+  summarise(event = n_distinct(event), .by = c("name", "parkrunner")) |>
+  filter(name != parkrunner) |>
   arrange(-event)
 
 
 rbenchmark::benchmark(
   "filter_first" = {
-    distict_parkrunners <- all_results %>%
+    distict_parkrunners <- all_results |>
       summarise(
         events = n_distinct(event),
         runners = n(),
         .by = c("name", "parkrunner")
-      ) %>%
-      filter(name != parkrunner) %>%
+      ) |>
+      filter(name != parkrunner) |>
       arrange(-events)
   },
   "filter_second" = {
-    distict_parkrunners <- all_results %>%
-      filter(!event %in% gm) %>%
+    distict_parkrunners <- all_results |>
+      filter(!event %in% gm) |>
       summarise(
         events = n_distinct(event),
         runners = n(),
         .by = c("name", "parkrunner")
-      ) %>%
-      filter(name != parkrunner) %>%
+      ) |>
+      filter(name != parkrunner) |>
       arrange(-events)
   },
   replications = 20
@@ -74,21 +75,21 @@ library(packcircles)
 library(glue)
 
 bubble <- function(var, name_in) {
-  distict_parkrunners <- all_results %>%
-    filter(name == name_in) %>%
-    # filter(!event %in% gm) %>%
+  distict_parkrunners <- all_results |>
+    filter(name == name_in) |>
+    # filter(!event %in% gm) |>
     summarise(
       events = n_distinct(event),
       runs = n(),
       .by = c("name", "parkrunner")
-    ) %>%
+    ) |>
     mutate(value = .data[[var]])
 
   names <- unique(all_results$name)
 
-  data <- distict_parkrunners %>%
-    arrange(-events, -runs) %>%
-    filter(row_number() <= 10 | parkrunner %in% names) %>%
+  data <- distict_parkrunners |>
+    arrange(-events, -runs) |>
+    filter(row_number() <= 10 | parkrunner %in% names) |>
     filter(value >= 3)
 
   packing <- circleProgressiveLayout(data$value, sizetype = 'area')
@@ -96,7 +97,7 @@ bubble <- function(var, name_in) {
   # Create data frame with circle positions
   circles <- circleLayoutVertices(packing, npoints = 50)
   # Combine with original data and calculate text size based on radius
-  data_packed <- cbind(data, packing) %>%
+  data_packed <- cbind(data, packing) |>
     mutate(
       name_events = paste(gsub(" ", "\n", parkrunner), value, sep = "\n"),
       # Scale text size proportionally to radius

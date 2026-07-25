@@ -88,7 +88,8 @@ hc2 <- hc |>
   )
 
 events <- list(
-  "peel" = 232:235
+  "peel" = 232:235,
+  "pennigntonflash" = 685:689
 )
 runners <- hc2 |> distinct(name, id)
 
@@ -245,7 +246,8 @@ out <- runners |>
     id,
     total_pts,
     contains(c(
-      "peel"
+      "peel",
+      "pennington"
     ))
   ) |>
   arrange(-total_pts)
