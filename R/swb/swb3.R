@@ -1,4 +1,4 @@
-load("data/finishes.RDa")
+load("data/swb_id.RDa")
 library(tidyverse)
 library(parkrunfunctions)
 library(glue)
@@ -33,6 +33,7 @@ coupon_event_time_double <- function(vec) {
 # id_done2 = tribble(
 #   ~"id" , ~"event" , ~"time"
 # )
+load("data/swb_id2.RDa")
 df <- id_done |> filter(swb == 1)
 
 for (j in df$id) {
