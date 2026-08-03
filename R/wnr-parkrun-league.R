@@ -89,7 +89,7 @@ hc2 <- hc |>
 
 events <- list(
   "peel" = 232:235,
-  "pennigntonflash" = 685:689
+  "penningtonflash" = 685:689
 )
 runners <- hc2 |> distinct(name, id)
 
