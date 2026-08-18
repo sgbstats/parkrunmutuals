@@ -19,16 +19,16 @@ source("bubbles.R")
 
 load("all_results.RDa")
 load("distances.RDa")
-prs_short = parkruns_list$name
-names(prs_short) = parkruns_list$short
+prs_short <- parkruns_list$name
+names(prs_short) <- parkruns_list$short
 # names_all = all_results |> count(id, parkrunner)
 
-all_results2 = names_all |>
+all_results2 <- names_all |>
   filter(n >= 3) |>
   arrange(name, -n) |>
   filter(name != parkrunner)
 
-names_all2 = all_results2 |>
+names_all2 <- all_results2 |>
   summarise(n = sum(n), .by = c(id, parkrunner))
 
 ui <- navbarPage(
@@ -199,11 +199,16 @@ ui <- navbarPage(
           "home",
           "Home location",
           choices = prs_short,
-          selected = "southmanchester",
+          selected = c("southmanchester"),
+          multiple = TRUE,
           options = list(
             placeholder = "Start typing…",
             create = FALSE
           )
+        ),
+        div(
+          style = "color: #6c757d; font-size: 90%; margin-top: 0.25rem;",
+          "If two locations are chosen then the distance is the aggregate distance from all home locations"
         )
       ),
       mainPanel(
@@ -215,7 +220,7 @@ ui <- navbarPage(
 
 
 server <- function(input, output, session) {
-  output$update_time = renderUI({
+  output$update_time <- renderUI({
     HTML(paste0("Last update: ", format(date, format = "%Y-%m-%d")))
   })
 
@@ -337,7 +342,7 @@ server <- function(input, output, session) {
     updateNumericInput(session, "min", value = min_val)
   })
 
-  output$main = renderPlot(
+  output$main <- renderPlot(
     {
       req(
         input$name,
@@ -490,7 +495,7 @@ server <- function(input, output, session) {
     req(input$parkrun_name2)
     req(input$timeage)
 
-    h2h = all_results |>
+    h2h <- all_results |>
       filter(
         name == input$name2,
         id %in%
@@ -516,18 +521,18 @@ server <- function(input, output, session) {
       )
 
     if (input$timeage == "time") {
-      head_to_head = h2h |> rename(rank = rank_time) |> select(-rank_ag)
+      head_to_head <- h2h |> rename(rank = rank_time) |> select(-rank_ag)
     } else {
-      head_to_head = h2h |> rename(rank = rank_ag) |> select(-rank_time)
+      head_to_head <- h2h |> rename(rank = rank_ag) |> select(-rank_time)
     }
     head_to_head
   })
 
-  output$main2 = renderDataTable(
+  output$main2 <- renderDataTable(
     {
       req(input$filter_wins)
 
-      x = head_to_head() |>
+      x <- head_to_head() |>
         dplyr::select(-rank, -pos, -id) |>
         pivot_wider(names_from = parkrunner, values_from = c("time", "ag")) |>
         na.omit() |>
@@ -541,7 +546,7 @@ server <- function(input, output, session) {
           ))
         )
 
-      x1 = x |>
+      x1 <- x |>
         merge(
           head_to_head() |>
             filter(parkrunner == input$name_h2h) |>
@@ -558,11 +563,11 @@ server <- function(input, output, session) {
         )
 
       if (input$filter_wins == "all") {
-        x2 = x1 |> dplyr::select(-rank)
+        x2 <- x1 |> dplyr::select(-rank)
       } else if (input$filter_wins == "y") {
-        x2 = x1 |> filter(rank == 0) |> dplyr::select(-rank)
+        x2 <- x1 |> filter(rank == 0) |> dplyr::select(-rank)
       } else if (input$filter_wins == "r") {
-        x2 = x1 |> filter(rank == 1) |> dplyr::select(-rank)
+        x2 <- x1 |> filter(rank == 1) |> dplyr::select(-rank)
       }
 
       x2
@@ -574,8 +579,8 @@ server <- function(input, output, session) {
     )
   )
 
-  output$text = renderUI({
-    x = head_to_head() |>
+  output$text <- renderUI({
+    x <- head_to_head() |>
       dplyr::select(-pos, -time, -id, -ag) |>
       pivot_wider(names_from = parkrunner, values_from = rank) |>
       na.omit() |>
@@ -588,8 +593,8 @@ server <- function(input, output, session) {
       pivot_wider(names_from = parkrunner, values_from = wins) |>
       select(any_of(c(input$name2, input$name_h2h)))
 
-    leftwins = x[1, 1]
-    rightwins = x[1, 2]
+    leftwins <- x[1, 1]
+    rightwins <- x[1, 2]
 
     HTML(paste(
       "<h2>",
@@ -602,18 +607,25 @@ server <- function(input, output, session) {
     ))
   })
 
-  output$mnendy = renderDataTable(
+  output$mnendy <- renderDataTable(
     {
-      events_done2 = events_done |>
+      events_done2 <- events_done |>
         filter(name %in% input$name3) |>
         pull(event)
 
-      x = distance |>
-        filter(name.x == input$home) |>
+      x <- distance |>
+        filter(name.x %in% input$home) |>
         filter(!short %in% events_done2) |>
+        summarize(miles = sum(miles), .by = c(short)) |>
         arrange(miles) |>
-        mutate(miles = sprintf("%.0f", miles)) |>
-        dplyr::select("Name" = short, "Distance (mi)" = miles)
+        mutate(miles = round(miles))
+      if (length(input$home) > 1) {
+        x <- x |>
+          dplyr::select("Name" = short, "Total Distance (mi)" = miles)
+      } else {
+        x <- x |>
+          dplyr::select("Name" = short, "Distance (mi)" = miles)
+      }
 
       x
     },
