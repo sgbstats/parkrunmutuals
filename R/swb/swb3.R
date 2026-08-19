@@ -95,3 +95,91 @@ for (j in df$id) {
     }
   )
 }
+
+
+fit <- survival::survfit(
+  Surv(events, swb) ~ 1,
+  data = id_done2
+)
+fit
+library(survival)
+library(ggsurvfit)
+library(ggplot2)
+
+# use existing fit if present; otherwise recreate from `out`
+if (!exists("fit")) {
+  fit <- survfit(Surv(events, swb) ~ 1, data = id_done2)
+}
+# compute median time (first time survival <= 0.5); handle "median not reached"
+med_time <- {
+  idx <- which(fit$surv <= 0.5)
+  if (length(idx)) fit$time[min(idx)] else NA_real_
+}
+
+# produce the KM plot (returns a ggplot object)
+
+# build step data from the survfit
+s <- summary(fit)
+df_fit <- tibble(time = c(0, s$time), surv = c(1, s$surv)) |>
+  mutate(event = 1 - surv)
+
+# plot upward curve
+p_up <- ggplot(df_fit, aes(x = time, y = event)) +
+  geom_step() +
+  labs(
+    title = "Double SWB (cumulative event probability)",
+    x = "Events",
+    y = "Cumulative probability"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent)
+
+# add median lines/label (same med_time as before)
+if (!is.na(med_time)) {
+  p_up <- p_up +
+    ggplot2::geom_vline(
+      xintercept = med_time,
+      linetype = "dashed",
+      color = "red",
+      linewidth = 0.6
+    ) +
+    ggplot2::geom_hline(
+      yintercept = 0.5,
+      linetype = "dashed",
+      color = "red",
+      linewidth = 0.6
+    ) +
+    ggplot2::annotate(
+      "text",
+      x = med_time,
+      y = 0.52,
+      label = paste0("median = ", signif(med_time, 3)),
+      hjust = 0,
+      vjust = 0,
+      color = "red",
+      size = 3
+    )
+} else {
+  p_up <- p_up + ggplot2::labs(subtitle = "Median not reached (survival > 0.5)")
+}
+
+
+p_up
+
+
+coxph(Surv(events, swb) ~ tq, data = id_done2)
+
+
+id3 <- merge(
+  id_done |> filter(swb == 1) |> select(id, events),
+  id_done2 |> select(id, swb, events),
+  by = "id",
+  all.x = TRUE
+) |>
+  mutate(net = events.y - events.x)
+
+id3 |>
+  filter(swb == 1) |>
+  ggplot(aes(x = events.x, y = events.y)) +
+  geom_point() +
+  labs(x = "Time to SWB", y = "Time to Double SWB")
