@@ -31,6 +31,13 @@ all_results2 <- names_all |>
 names_all2 <- all_results2 |>
   summarise(n = sum(n), .by = c(id, parkrunner))
 
+format_h2h_time <- function(x) {
+  x <- as.character(x)
+  x <- sub(":00$", "", x)
+  x <- sub("^0([0-9]:)", "\\1", x)
+  x
+}
+
 ui <- navbarPage(
   "parkrun mutuals",
   tabPanel(
@@ -121,7 +128,7 @@ ui <- navbarPage(
           "",
           c("All Results" = "all", "Your Wins" = "y", "Rival Wins" = "r"),
           selected = "all",
-          inline = T
+          inline = TRUE
         ),
         pickerInput(
           "parkrun_name2",
@@ -217,7 +224,6 @@ ui <- navbarPage(
     )
   )
 )
-
 
 server <- function(input, output, session) {
   output$update_time <- renderUI({
@@ -556,7 +562,16 @@ server <- function(input, output, session) {
         rename(
           "Event" = event,
           "Number" = event_no
-        ) |>
+        )
+
+      if (input$timeage == "time") {
+        x1 <- x1 |>
+          mutate(
+            across(starts_with("time_"), format_h2h_time)
+          )
+      }
+
+      x1 <- x1 |>
         rename_with(
           ~ gsub(paste0(input$timeage, "_"), "", .x),
           .cols = starts_with(input$timeage)

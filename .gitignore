@@ -37,3 +37,5 @@ rsconnect/
 
 junk/
 credentials.json
+cache/
+sankey_plots/
