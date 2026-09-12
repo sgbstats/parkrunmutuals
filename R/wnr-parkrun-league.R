@@ -248,7 +248,8 @@ out <- runners |>
     total_pts,
     contains(c(
       "peel",
-      "pennington"
+      "pennington",
+	"alexandra"
     ))
   ) |>
   arrange(-total_pts)
