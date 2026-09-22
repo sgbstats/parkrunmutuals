@@ -2,7 +2,7 @@
 "$schema" = "https://cdn.posit.co/publisher/schemas/posit-publishing-record-schema-v3.json"
 server_type = "connect_cloud"
 server_url = "https://connect.posit.cloud"
-client_version = "2.11.0"
+client_version = "2.13.9"
 created_at = "2026-01-31T13:19:31.909Z"
 type = "r-shiny"
 configuration_name = "parkrunmutuals-KQIK"
@@ -10,12 +10,13 @@ id = "019ac018-48d6-54ae-29ab-95f4379025bb"
 dashboard_url = "https://connect.posit.cloud/sgbstats/content/019ac018-48d6-54ae-29ab-95f4379025bb"
 direct_url = "https://019ac018-48d6-54ae-29ab-95f4379025bb.share.connect.posit.cloud"
 logs_url = "https://connect.posit.cloud/sgbstats/content/019ac018-48d6-54ae-29ab-95f4379025bb/history"
-deployed_at = "2026-08-19T10:52:09.924Z"
+deployed_at = "2026-09-22T11:23:35.674Z"
 files = [
     ".posit/publish/deployments/deployment-CQSL.toml",
     ".posit/publish/parkrunmutuals-KQIK.toml",
     "app.R",
     "bubbles.R",
+    "supabase-storage.R",
 ]
 
 [connect_cloud]
@@ -32,8 +33,12 @@ files = [
     "/.posit/publish/parkrunmutuals-KQIK.toml",
     "/.posit/publish/deployments/deployment-CQSL.toml",
     "/bubbles.R",
+    "/supabase-storage.R",
 ]
 title = "parkrunmutuals"
+secrets = [
+    "SUPABASE_API_KEY",
+]
 
 [configuration.r]
 version = "4.5.3"
@@ -238,6 +243,28 @@ author = "Douglas Bates [aut] (ORCID: <https://orcid.org/0000-0001-8316-9503>), 
 maintainer = "Martin Maechler <mmaechler+Matrix@gmail.com>"
 repository = "CRAN"
 
+[renv.packages.PKI]
+package = "PKI"
+version = "0.1-15"
+source = "Repository"
+title = "Public Key Infrastucture for R Based on the X.509 Standard"
+"authors@r" = "person(\"Simon\", \"Urbanek\", role=c(\"aut\",\"cre\",\"cph\"), email=\"Simon.Urbanek@r-project.org\", comment=c(\"https://urbanek.nz\", ORCID=\"0000-0003-2297-1732\"))"
+maintainer = "Simon Urbanek <Simon.Urbanek@r-project.org>"
+depends = [
+    "R (>= 2.9.0)",
+    "base64enc",
+]
+enhances = [
+    "gmp",
+]
+description = "Public Key Infrastucture functions such as verifying certificates, RSA encription and signing which can be used to build PKI infrastructure and perform cryptographic tasks."
+license = "GPL-2 | GPL-3 | file LICENSE"
+url = "http://www.rforge.net/PKI"
+system_requirements = "OpenSSL library and headers (openssl-dev or similar)"
+needs_compilation = "yes"
+author = "Simon Urbanek [aut, cre, cph] (https://urbanek.nz, ORCID: <https://orcid.org/0000-0003-2297-1732>)"
+repository = "CRAN"
+
 [renv.packages.R6]
 package = "R6"
 version = "2.6.1"
@@ -311,6 +338,36 @@ encoding = "UTF-8"
 vignette_builder = "Rcpp"
 needs_compilation = "yes"
 author = "Dirk Eddelbuettel [aut, cre] (ORCID: <https://orcid.org/0000-0001-6419-907X>), Romain Francois [aut] (ORCID: <https://orcid.org/0000-0002-2444-4226>), JJ Allaire [aut] (ORCID: <https://orcid.org/0000-0003-0174-9868>), Kevin Ushey [aut] (ORCID: <https://orcid.org/0000-0003-2880-7407>), Qiang Kou [aut] (ORCID: <https://orcid.org/0000-0001-6786-5453>), Nathan Russell [aut], Iñaki Ucar [aut] (ORCID: <https://orcid.org/0000-0001-6403-5550>), Doug Bates [aut] (ORCID: <https://orcid.org/0000-0001-8316-9503>), John Chambers [aut]"
+maintainer = "Dirk Eddelbuettel <edd@debian.org>"
+repository = "CRAN"
+
+[renv.packages.RcppTOML]
+package = "RcppTOML"
+version = "0.2.3"
+source = "Repository"
+type = "Package"
+title = "'Rcpp' Bindings to Parser for \"Tom's Obvious Markup Language\""
+date = "2025-03-08"
+"authors@r" = "c(person(\"Dirk\", \"Eddelbuettel\", role = c(\"aut\", \"cre\"), email = \"edd@debian.org\", comment = c(ORCID = \"0000-0001-6419-907X\")), person(\"Mark\", \"Gillard\", role = \"aut\", comment = \"Author of 'toml++' header library\"))"
+description = "The configuration format defined by 'TOML' (which expands to \"Tom's Obvious Markup Language\") specifies an excellent format (described at <https://toml.io/en/>) suitable for both human editing as well as the common uses of a machine-readable format. This package uses 'Rcpp' to connect to the 'toml++' parser written by Mark Gillard to R."
+system_requirements = "A C++17 compiler"
+bug_reports = "https://github.com/eddelbuettel/rcpptoml/issues"
+url = "http://dirk.eddelbuettel.com/code/rcpp.toml.html"
+imports = [
+    "Rcpp (>= 1.0.8)",
+]
+depends = [
+    "R (>= 3.3.0)",
+]
+linking_to = [
+    "Rcpp",
+]
+suggests = [
+    "tinytest",
+]
+license = "GPL (>= 2)"
+needs_compilation = "yes"
+author = "Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), Mark Gillard [aut] (Author of 'toml++' header library)"
 maintainer = "Dirk Eddelbuettel <edd@debian.org>"
 repository = "CRAN"
 
@@ -2358,6 +2415,38 @@ author = "Hadley Wickham [aut] (ORCID: <https://orcid.org/0000-0003-4757-117X>),
 maintainer = "Thomas Lin Pedersen <thomas.pedersen@posit.co>"
 repository = "CRAN"
 
+[renv.packages.jose]
+package = "jose"
+version = "1.2.1"
+source = "Repository"
+type = "Package"
+title = "JavaScript Object Signing and Encryption"
+"authors@r" = "person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"),  email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\"))"
+description = "Read and write JSON Web Keys (JWK, rfc7517), generate and verify JSON Web Signatures (JWS, rfc7515) and encode/decode JSON Web Tokens (JWT, rfc7519) <https://datatracker.ietf.org/wg/jose/documents/>. These standards provide  modern signing and encryption formats that are natively supported by browsers via the JavaScript WebCryptoAPI <https://www.w3.org/TR/WebCryptoAPI/#jose>,  and used by services like OAuth 2.0, LetsEncrypt, and Github Apps."
+license = "MIT + file LICENSE"
+url = "https://r-lib.r-universe.dev/jose"
+bug_reports = "https://github.com/r-lib/jose/issues"
+depends = [
+    "openssl (>= 1.2.1)",
+]
+imports = [
+    "jsonlite",
+]
+roxygen_note = "7.1.2"
+vignette_builder = "knitr"
+suggests = [
+    "spelling",
+    "testthat",
+    "knitr",
+    "rmarkdown",
+]
+encoding = "UTF-8"
+language = "en-US"
+needs_compilation = "no"
+author = "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>)"
+maintainer = "Jeroen Ooms <jeroenooms@gmail.com>"
+repository = "CRAN"
+
 [renv.packages.jquerylib]
 package = "jquerylib"
 version = "0.1.4"
@@ -3002,6 +3091,42 @@ encoding = "UTF-8"
 needs_compilation = "yes"
 author = "Michael Bedward [aut, cre], David Eppstein [aut] (Author of Python code for graph-based circle packing ported to C++ for this package), Peter Menzel [aut] (Author of C code for progressive circle packing ported to C++ for this package)"
 maintainer = "Michael Bedward <michael.bedward@gmail.com>"
+repository = "CRAN"
+
+[renv.packages.packrat]
+package = "packrat"
+version = "0.9.3"
+source = "Repository"
+type = "Package"
+title = "A Dependency Management System for Projects and their R Package Dependencies"
+"authors@r" = "c( person(\"Aron\", \"Atkins\", , \"aron@posit.co\", role = c(\"aut\", \"cre\")), person(\"Toph\", \"Allen\", role = \"aut\"), person(\"Kevin\", \"Ushey\", role = \"aut\"), person(\"Jonathan\", \"McPherson\", role = \"aut\"), person(\"Joe\", \"Cheng\", role = \"aut\"), person(\"JJ\", \"Allaire\", role = \"aut\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )"
+description = "Manage the R packages your project depends on in an isolated, portable, and reproducible way."
+license = "GPL-2"
+url = "https://github.com/rstudio/packrat"
+bug_reports = "https://github.com/rstudio/packrat/issues"
+depends = [
+    "R (>= 3.0.0)",
+]
+imports = [
+    "tools",
+    "utils",
+]
+suggests = [
+    "devtools",
+    "httr",
+    "knitr",
+    "mockery",
+    "rmarkdown",
+    "testthat (>= 3.0.0)",
+    "webfakes",
+    "withr",
+]
+"config/testthat/edition" = "3"
+encoding = "UTF-8"
+roxygen_note = "7.3.2"
+needs_compilation = "no"
+author = "Aron Atkins [aut, cre], Toph Allen [aut], Kevin Ushey [aut], Jonathan McPherson [aut], Joe Cheng [aut], JJ Allaire [aut], Posit Software, PBC [cph, fnd]"
+maintainer = "Aron Atkins <aron@posit.co>"
 repository = "CRAN"
 
 [renv.packages.pillar]
@@ -3769,6 +3894,65 @@ repository = "CRAN"
 url = "https://github.com/bethatkinson/rpart, https://cran.r-project.org/package=rpart"
 bug_reports = "https://github.com/bethatkinson/rpart/issues"
 
+[renv.packages.rsconnect]
+package = "rsconnect"
+version = "1.7.0"
+source = "Repository"
+type = "Package"
+title = "Deploy Docs, Apps, and APIs to 'Posit Connect', 'shinyapps.io', and 'RPubs'"
+"authors@r" = "c( person(\"Aron\", \"Atkins\", , \"aron@posit.co\", role = c(\"aut\", \"cre\")), person(\"Toph\", \"Allen\", role = \"aut\"), person(\"Hadley\", \"Wickham\", role = \"aut\"), person(\"Jonathan\", \"McPherson\", role = \"aut\"), person(\"JJ\", \"Allaire\", role = \"aut\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )"
+description = "Programmatic deployment interface for 'RPubs', 'shinyapps.io', and 'Posit Connect'. Supported content types include R Markdown documents, Shiny applications, Plumber APIs, plots, and static web content."
+license = "GPL-2"
+url = "https://rstudio.github.io/rsconnect/, https://github.com/rstudio/rsconnect"
+bug_reports = "https://github.com/rstudio/rsconnect/issues"
+depends = [
+    "R (>= 3.5.0)",
+]
+imports = [
+    "cli",
+    "curl",
+    "digest",
+    "jsonlite",
+    "lifecycle",
+    "openssl (>= 2.0.0)",
+    "PKI",
+    "packrat (>= 0.6)",
+    "renv (>= 1.0.0)",
+    "rlang (>= 1.0.0)",
+    "rstudioapi (>= 0.5)",
+    "snowflakeauth",
+    "tools",
+    "yaml (>= 2.1.5)",
+    "utils",
+]
+suggests = [
+    "Biobase",
+    "BiocManager",
+    "foreign",
+    "knitr",
+    "MASS",
+    "plumber (>= 0.3.2)",
+    "quarto",
+    "RCurl",
+    "reticulate",
+    "rmarkdown (>= 1.1)",
+    "shiny",
+    "testthat (>= 3.1.9)",
+    "webfakes",
+    "withr",
+]
+vignette_builder = "knitr, rmarkdown"
+"config/needs/website" = "tidyverse/tidytemplate"
+"config/testthat/edition" = "3"
+"config/testthat/parallel" = "true"
+"config/python/note" = "Python <= 3.10 requires tomllib package for pyproject.toml parsing"
+encoding = "UTF-8"
+roxygen_note = "7.3.3"
+needs_compilation = "no"
+author = "Aron Atkins [aut, cre], Toph Allen [aut], Hadley Wickham [aut], Jonathan McPherson [aut], JJ Allaire [aut], Posit Software, PBC [cph, fnd]"
+maintainer = "Aron Atkins <aron@posit.co>"
+repository = "CRAN"
+
 [renv.packages.rstudioapi]
 package = "rstudioapi"
 version = "0.18.0"
@@ -4100,6 +4284,38 @@ encoding = "UTF-8"
 needs_compilation = "no"
 author = "Dean Attali [aut, cre] (ORCID: <https://orcid.org/0000-0002-5645-3493>)"
 maintainer = "Dean Attali <daattali@gmail.com>"
+repository = "CRAN"
+
+[renv.packages.snowflakeauth]
+package = "snowflakeauth"
+version = "0.2.1"
+source = "Repository"
+title = "Authentication Helpers for 'Snowflake'"
+"authors@r" = "c( person(\"Aaron\", \"Jacobs\", , \"aaron.jacobs@posit.co\", role = c(\"aut\")), person(\"E. David\", \"Aja\", , \"david@posit.co\", role = c(\"aut\", \"cre\")), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )"
+description = "Authentication helpers for 'Snowflake'. It provides compatibility with authentication approaches supported by the 'Snowflake Connector for Python' <https://pypi.org/project/snowflake-connector-python> and the 'Snowflake CLI' <https://pypi.org/project/snowflake-cli>."
+license = "MIT + file LICENSE"
+encoding = "UTF-8"
+imports = [
+    "cli",
+    "curl",
+    "jsonlite",
+    "RcppTOML",
+    "rlang",
+    "jose",
+    "openssl",
+]
+suggests = [
+    "httpuv",
+    "testthat (>= 3.0.0)",
+    "withr",
+]
+roxygen_note = "7.3.2"
+"config/testthat/edition" = "3"
+url = "https://posit-dev.github.io/snowflakeauth/, https://github.com/posit-dev/snowflakeauth"
+bug_reports = "https://github.com/posit-dev/snowflakeauth/issues"
+needs_compilation = "no"
+author = "Aaron Jacobs [aut], E. David Aja [aut, cre], Posit Software, PBC [cph, fnd]"
+maintainer = "E. David Aja <david@posit.co>"
 repository = "CRAN"
 
 [renv.packages.sourcetools]

@@ -7,6 +7,8 @@ library(stringi)
 
 # pak::pak("sgbstats/parkrunfunctions")
 library(parkrunfunctions)
+source("R/supabase-storage.R")
+source("R/distance.R")
 
 ids <- tribble(
   ~id        ,
@@ -210,17 +212,26 @@ save(
   file = "data/all_results.RDa"
 )
 
-googledrive::drive_auth(
-  email = TRUE,
-  path = NULL,
-  subject = NULL,
-  scopes = "drive",
-  cache = gargle::gargle_oauth_cache(),
-  use_oob = gargle::gargle_oob_default(),
-  token = NULL
+distance_data <- build_distance_data()
+distance <- distance_data$distance
+parkruns_list <- distance_data$parkruns_list
+
+bundle_path <- tempfile(fileext = ".RDa")
+on.exit(unlink(bundle_path), add = TRUE)
+save(
+  all_results,
+  runners,
+  parkruns,
+  date,
+  events_done,
+  names_ids,
+  names_all,
+  distance,
+  parkruns_list,
+  file = bundle_path
 )
 
-googledrive::drive_update(
-  media = "data/all_results.RDa",
-  file = googledrive::as_id("11d6wDY_ryjx5sxv5sVAS1x_wbquVQqLY"),
-)
+supabase_config <- supabase_storage_config()
+supabase_upload_object(bundle_path, config = supabase_config)
+verify_parkrunmutuals_bundle(config = supabase_config)
+message("Supabase publication completed successfully.")

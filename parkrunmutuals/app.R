@@ -4,21 +4,19 @@ library(tidyverse)
 library(shinyWidgets)
 library(DT)
 
-options(gargle_oauth_cache = ".secrets", gargle_oauth_email = TRUE)
-googledrive::drive_auth(
-  cache = ".secrets",
-  email = "sebastiangbate@gmail.com"
-)
-googledrive::drive_download(
-  googledrive::as_id("11d6wDY_ryjx5sxv5sVAS1x_wbquVQqLY"),
-  path = "all_results.RDa",
-  overwrite = T
-)
+source("supabase-storage.R")
 
+load_supabase_bundle <- function() {
+  destination <- tempfile(fileext = ".RDa")
+  on.exit(unlink(destination), add = TRUE)
+  supabase_download_object(destination = destination)
+  bundle <- load_parkrunmutuals_bundle(destination)
+  list2env(as.list(bundle), envir = .GlobalEnv)
+  invisible(TRUE)
+}
+
+load_supabase_bundle()
 source("bubbles.R")
-
-load("all_results.RDa")
-load("distances.RDa")
 prs_short <- parkruns_list$name
 names(prs_short) <- parkruns_list$short
 # names_all = all_results |> count(id, parkrunner)

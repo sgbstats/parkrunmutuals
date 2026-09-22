@@ -34,10 +34,13 @@ gm <- c(
   "Kingsway Park, Urmston"
 )
 
-load_data <- function(path) {
-  env <- new.env(parent = emptyenv())
-  load(path, envir = env)
-  as.list(env)
+source("R/supabase-storage.R")
+
+load_supabase_bundle <- function() {
+  destination <- tempfile(fileext = ".RDa")
+  on.exit(unlink(destination), add = TRUE)
+  supabase_download_object(destination = destination)
+  load_parkrunmutuals_bundle(destination)
 }
 
 cache_root <- file.path("data", "home_and_away", "cache")
@@ -303,15 +306,8 @@ resolve_gap_week <- function(detail) {
 }
 
 main <- function() {
-  distances_path <- file.path("parkrunmutuals", "distances.RDa")
-  if (!file.exists(distances_path)) {
-    stop("Missing parkrunmutuals/distances.RDa")
-  }
-
-  parkruns_list <- load_data(distances_path)$parkruns_list
-  if (is.null(parkruns_list)) {
-    stop("parkruns_list object not found")
-  }
+  bundle <- load_supabase_bundle()
+  parkruns_list <- get("parkruns_list", envir = bundle, inherits = FALSE)
 
   cutoff_date <- Sys.Date() - years(2)
 
