@@ -54,11 +54,41 @@ ids <- tribble(
 )
 
 all_parkruns <- list()
+failed_ids <- character()
 for (i in ids$id) {
-  hold <- parkrunfunctions::get_all_runs(i)
-  cat(paste(hold$name, "\n"))
-  all_parkruns[[str_to_lower(str_remove_all(hold$name, "\\s"))]] <- hold
-  Sys.sleep(25)
+  hold <- tryCatch(
+    parkrunfunctions::get_all_runs(i),
+    error = function(e) {
+      warning(sprintf("Could not fetch runner %s: %s", i, conditionMessage(e)))
+      NULL
+    },
+    finally = Sys.sleep(25)
+  )
+  if (
+    is.null(hold) ||
+      length(hold$name) != 1L ||
+      is.na(hold$name) ||
+      !nzchar(trimws(hold$name))
+  ) {
+    warning(sprintf("Skipping runner %s: no valid name returned", i))
+    failed_ids <- c(failed_ids, i)
+    next
+  }
+  key <- str_to_lower(str_remove_all(hold$name, "\\s"))
+  if (key %in% names(all_parkruns)) {
+    warning(sprintf("Skipping runner %s: duplicate name key %s", i, key))
+    failed_ids <- c(failed_ids, i)
+    next
+  }
+  message(hold$name)
+  all_parkruns[[key]] <- hold
+}
+if (length(failed_ids)) {
+  stop(
+    "Runner histories could not be loaded for IDs: ",
+    paste(failed_ids, collapse = ", "),
+    ". Existing data/all_parkruns.RDa was not overwritten; retry later."
+  )
 }
 all_parkruns[["names_ids"]] <- map_dfr(
   all_parkruns,
