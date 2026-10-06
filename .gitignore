@@ -42,3 +42,6 @@ junk/
 credentials.json
 cache/
 sankey_plots/
+
+# Posit Assistant plans
+.posit/assistant/plans/
