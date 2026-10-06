@@ -1,263 +1,199 @@
 library(tidyverse)
 library(parkrunfunctions)
-library(stringr)
-library(lubridate)
 library(hms)
-library(glue)
 library(googlesheets4)
+source("R/wnr-league-helpers.R")
 load("data/all_parkruns.RDa")
 
-ids <- tribble(
-  ~id        ,
+# Change this mapping and the year when configuring a new league season.
+league_year <- 2026L
+league_events <- c(
+  july = "peel",
+  august = "penningtonflash",
+  september = "alexandra",
+  october = "fletchermoss",
+  november = "wythenshawe",
+  december = "southmanchester"
+)
+month_numbers <- match(names(league_events), tolower(month.name))
+if (
+  anyNA(month_numbers) ||
+    anyDuplicated(month_numbers) ||
+    anyDuplicated(league_events)
+) {
+  stop("League months and parkruns must be unique and valid")
+}
+today <- Sys.Date()
+active <- month_numbers <= as.integer(format(today, "%m")) &
+  league_year <= as.integer(format(today, "%Y"))
+if (league_year < as.integer(format(today, "%Y"))) {
+  active[] <- TRUE
+}
+active[league_year > as.integer(format(today, "%Y"))] <- FALSE
+active_events <- league_events[active]
+active_months <- month_numbers[active]
 
-  '493595'   , # Seb
-
-  "42804"    , #paul M
-  "9334474"  , #Alex
-  "6391679"  , #kirsty
-  "7433025"  , #Helen
-  "4301378"  , #Lindsay
-  "4051781"  , #Callum
-  "16568"    , #Paul C
-  "16569"    , #Lynda
-  "3629365"  , #Isabel
-  "4228499"  , #sarah
-  "10000894" , #andrew
-  "1166640"  , #gary
-  "81779"    , #jon
-  "8326421"  , #steve
+ids <- c(
+  "493595",
+  "42804",
+  "9334474",
+  "6391679",
+  "7433025",
+  "4301378",
+  "4051781",
+  "16568",
+  "16569",
+  "3629365",
+  "4228499",
+  "10000894",
+  "1166640",
+  "81779",
+  "8326421"
 )
 
-col <- c(names(all_parkruns[["sebbate"]][["results"]]), "id", "name")
-hc <- data.frame(matrix(ncol = length(col), nrow = 0))
-names(hc) <- col
+hc <- purrr::map_dfr(
+  all_parkruns[names(all_parkruns) != "names_ids"],
+  function(runner) {
+    if (!as.character(runner$id) %in% ids) {
+      return(NULL)
+    }
+    runner$results |>
+      mutate(id = as.character(runner$id), name = runner$name)
+  }
+) |>
+  mutate(
+    time = as_hms(if_else(nchar(time) == 5L, paste0("00:", time), time)),
+    event_date = as.Date(event_date, format = "%d/%m/%Y")
+  )
+runners <- hc |> distinct(name, id)
 
+hc2 <- purrr::map2_dfr(active_events, active_months, function(event, month) {
+  start <- handicap_start(league_year, month)
+  end <- as.Date(sprintf("%04d-%02d-01", league_year, month))
+  hc |>
+    filter(event_date >= start, event_date < end, !is.na(time)) |>
+    summarise(hc = min(time), .by = c("name", "id")) |>
+    mutate(event = event)
+})
 
-for (i in names(all_parkruns)[names(all_parkruns) != "names_ids"]) {
-  if (all_parkruns[[i]][["id"]] %in% ids$id) {
-    hc <- hc |>
-      rbind.data.frame(
-        all_parkruns[[i]][["results"]] |>
-          mutate(
-            id = all_parkruns[[i]][["id"]],
-            name = all_parkruns[[i]][["name"]]
-          )
+cache_dir <- file.path("data", "wnr")
+entries <- purrr::map2(active_events, active_months, function(event, month) {
+  dates <- league_dates(league_year, month, today)
+  fetch_league_month(event, dates, cache_dir)
+})
+names(entries) <- active_events
+
+res <- purrr::imap_dfr(entries, function(month_entries, event) {
+  purrr::map_dfr(month_entries, function(entry) {
+    entry$result$results |>
+      mutate(
+        id = as.character(id),
+        time = as_hms(if_else(
+          nchar(as.character(time)) == 5L,
+          paste0("00:", time),
+          as.character(time)
+        )),
+        event = event,
+        event_date = entry$date
+      )
+  })
+})
+volunteers <- purrr::imap_dfr(entries, function(month_entries, event) {
+  purrr::map_dfr(month_entries, function(entry) {
+    entry$result$volunteers |>
+      transmute(id = as.character(id), event = event, event_date = entry$date)
+  })
+})
+
+if (nrow(res) == 0L) {
+  res <- tibble(
+    id = character(),
+    event = character(),
+    event_date = as.Date(character()),
+    time = as_hms(character())
+  )
+}
+if (nrow(volunteers) == 0L) {
+  volunteers <- tibble(
+    id = character(),
+    event = character(),
+    event_date = as.Date(character())
+  )
+}
+
+eligible_results <- res |> filter(id %in% ids)
+vol_pts <- volunteers |>
+  filter(id %in% ids) |>
+  left_join(
+    eligible_results |> distinct(id, event, event_date) |> mutate(ran = TRUE),
+    by = c("id", "event", "event_date")
+  ) |>
+  mutate(pts = if_else(is.na(ran), 3, 1)) |>
+  summarise(pts = max(pts), .by = c("id", "event"))
+
+# Retain the existing points ranking, but only compare runners with a handicap.
+time_diff <- eligible_results |>
+  inner_join(hc2 |> select(id, event, hc), by = c("id", "event")) |>
+  mutate(diff = time - hc) |>
+  slice_min(diff, by = c("id", "event"), with_ties = FALSE) |>
+  arrange(event, diff) |>
+  mutate(pts = pmax(11 - row_number(), 3), .by = event) |>
+  mutate(
+    diff = as.character(as_hms(diff)),
+    time = as.character(as_hms(time))
+  ) |>
+  select(id, event, diff, time, pts)
+
+points <- bind_rows(vol_pts, time_diff |> select(id, event, pts)) |>
+  summarise(total_pts = sum(pts), .by = id)
+out <- runners |>
+  left_join(points, by = "id") |>
+  mutate(total_pts = replace_na(total_pts, 0))
+
+for (field in c("hc", "time", "diff", "pts", "vol")) {
+  values <- switch(
+    field,
+    hc = hc2 |> transmute(id, event, value = as.character(as_hms(hc))),
+    time = time_diff |> select(id, event, value = time),
+    diff = time_diff |> select(id, event, value = diff),
+    pts = time_diff |> select(id, event, value = pts),
+    vol = vol_pts |> select(id, event, value = pts)
+  )
+  if (nrow(values)) {
+    out <- out |>
+      left_join(
+        values |>
+          pivot_wider(
+            names_from = event,
+            values_from = value,
+            names_prefix = paste0(field, "_")
+          ),
+        by = "id"
       )
   }
-}
-
-hc2 <- hc |>
-  mutate(
-    time = as_hms(if_else(
-      stringr::str_length(time) == 5,
-      paste0("00:", time),
-      time
-    )),
-    event_date = as.Date(event_date, format = "%d/%m/%Y")
-  ) |>
-  summarise(
-    peel = min(time[
-      event_date < as.Date("2026-07-01") &
-        event_date >= as.Date("2026-01-01")
-    ]),
-    penningtonflash = min(time[
-      event_date < as.Date("2026-08-01") &
-        event_date >= as.Date("2026-01-01")
-    ]),
-    alexandra = min(time[
-      event_date < as.Date("2026-09-01") &
-        event_date >= as.Date("2026-01-01")
-    ]),
-    fletchermoss = min(time[
-      event_date < as.Date("2026-10-01") &
-        event_date >= as.Date("2026-01-01")
-    ]),
-    wythenshawe = min(time[
-      event_date < as.Date("2026-11-01") &
-        event_date >= as.Date("2026-01-01")
-    ]),
-    southmanchester = min(time[
-      event_date < as.Date("2026-12-01") &
-        event_date >= as.Date("2026-01-01")
-    ]),
-    .by = c("name", "id")
-  ) |>
-  pivot_longer(cols = -c(name, id), values_to = "hc", names_to = "event") |>
-  mutate(
-    hc = as_hms(hc),
-  )
-
-events <- list(
-  "peel" = 232:235,
-  "penningtonflash" = 685:689,
-  "alexandra"=245:248
-)
-runners <- hc2 |> distinct(name, id)
-
-res <- tribble(
-  ~"pos" , ~"parkrunner" , ~"time" , ~"ag" , ~"id" , ~"event" , ~"event_no"
-)
-volunteers <- tribble(
-  ~"parkrunner" , ~"id" , ~"event" , ~"event_no"
-)
-ls <- list.files("data/wnr", full.names = F)
-
-for (i in names(events)) {
-  for (j in events[[i]]) {
-    cat(paste(i, j, "\n"))
-    tryCatch(
-      {
-        if (glue("{i}{j}.RDa") %in% ls) {
-          load(glue("data/wnr/{i}{j}.RDa"))
-          assign("x", get(glue("{i}{j}")))
-        } else {
-          x <- get_result(event = i, event_no = j, as_hms = T, as_Date = T)
-          assign(glue("{i}{j}"), x)
-          save(list = glue("{i}{j}"), file = glue("data/wnr/{i}{j}.RDa"))
-          Sys.sleep(20)
-        }
-        res <- res |>
-          rbind.data.frame(
-            x[["results"]] |>
-              mutate(event = i, event_no = j)
-          )
-
-        volunteers <- volunteers |>
-          rbind.data.frame(
-            x[["volunteers"]] |>
-              select(id, "parkrunner") |>
-              mutate(event = i, event_no = j)
-          )
-      },
-      error = function(e) {
-        warning(conditionMessage(e))
-      },
-      warning = function(e) {
-        warning(conditionMessage(e))
+  for (event in active_events) {
+    column <- paste(field, event, sep = "_")
+    if (!column %in% names(out)) {
+      out[[column]] <- if (field %in% c("pts", "vol")) {
+        NA_real_
+      } else {
+        NA_character_
       }
-    )
+    }
   }
 }
-eligible_results <- runners |>
-  merge(
-    res |>
-      select(id, time, event, event_no),
-    all.x = T
-  )
-vol_pts <- volunteers |>
-  filter(id %in% ids$id) |>
-  select(id, event, event_no) |>
-  merge(eligible_results |> select(id, time, event, event_no), all.x = T) |>
-  mutate(pts = if_else(is.na(time), 3, 1)) |>
-  summarise(pts = max(pts, na.rm = T), .by = c("id", "event"))
 
+wanted <- as.vector(outer(
+  c("hc", "time", "diff", "pts", "vol"),
+  active_events,
+  paste,
+  sep = "_"
+))
+out <- out |>
+  select(name, id, total_pts, any_of(wanted)) |>
+  arrange(desc(total_pts))
 
-time_diff <- eligible_results |>
-  merge(
-    hc2,
-    all.x = T
-  ) |>
-  mutate(diff = time - hc) |>
-  slice_min(diff, by = c("id", "event"), with_ties = F) |>
-  select(id, event, diff, time) |>
-  arrange(diff) |>
-  mutate(pts = if_else(is.na(diff), 0, 11 - row_number()), .by = c("event")) |>
-  mutate(pts = if_else(is.na(diff), 0, max(pts, 3)), .by = c("event", "id")) |>
-  mutate(diff = as.character(as_hms(diff)), time = as.character(as_hms(time)))
-
-points <- vol_pts |>
-  rbind(time_diff |> select(id, event, pts)) |>
-  summarise(total_pts = sum(pts), .by = "id")
-
-out <- runners |>
-  merge(points) |>
-  merge(
-    hc2 |>
-      mutate(hc = as.character(hc)) |>
-      pivot_wider(
-        names_from = "event",
-        values_from = "hc",
-        names_prefix = "hc_"
-      ),
-    all.x = T
-  ) |>
-  merge(
-    time_diff |>
-      select(id, event, diff) |>
-      drop_na(event) |>
-      pivot_wider(
-        names_from = "event",
-        values_from = "diff",
-        names_prefix = "diff_"
-      ),
-    all.x = T
-  ) |>
-  merge(
-    time_diff |>
-      select(id, event, time) |>
-      drop_na(event) |>
-      pivot_wider(
-        names_from = "event",
-        values_from = "time",
-        names_prefix = "time_"
-      ),
-    all.x = T
-  ) |>
-  merge(
-    time_diff |>
-      select(id, event, pts) |>
-      drop_na(event) |>
-      pivot_wider(
-        names_from = "event",
-        values_from = "pts",
-        names_prefix = "pts_"
-      ),
-    all.x = T
-  ) |>
-  merge(
-    vol_pts |>
-      drop_na(event) |>
-      pivot_wider(
-        names_from = "event",
-        values_from = "pts",
-        names_prefix = "vol_"
-      ),
-    all.x = T
-  ) |>
-  select(
-    name,
-    id,
-    total_pts,
-    any_of(as.vector(outer(
-      c("hc", "time", "diff", "pts", "vol"),
-      c(
-        "peel",
-        "penningtonflash",
-        "alexandra",
-        "fletchermoss",
-        "wythenshawe",
-        "southmanchester"
-      ),
-      paste,
-      sep = "_"
-    )))
-  ) |>
-  select(
-    name,
-    id,
-    total_pts,
-    contains(c(
-      "peel",
-      "pennington",
-	"alexandra"
-    ))
-  ) |>
-  arrange(-total_pts)
-
-
-gs4_auth(
-  path = "credentials.json",
-)
+gs4_auth(path = "credentials.json")
 write_sheet(
   out,
   ss = "https://docs.google.com/spreadsheets/d/1mOPeM1BA2i5gw7tNMn7geTt_yLC4ngjFw2uh6zWl4wE/edit?usp=sharing",
