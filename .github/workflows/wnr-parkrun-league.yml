@@ -32,15 +32,32 @@ jobs:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
         run: |
-          jq --arg key "$GOOGLE_PRIVATE_KEY" '.private_key = $key' \
+          set -euo pipefail
+          if [[ -z "$GOOGLE_CREDENTIALS" || -z "$GOOGLE_PRIVATE_KEY" ]]; then
+            echo "::error::Set both GOOGLE_CREDENTIALS and GOOGLE_PRIVATE_KEY repository secrets."
+            exit 1
+          fi
+          jq --arg key "$GOOGLE_PRIVATE_KEY" \
+            '.private_key = ($key | gsub("\\\\n"; "\n") | gsub("\r\n?"; "\n"))' \
             <<< "$GOOGLE_CREDENTIALS" > credentials.json
+          chmod 600 credentials.json
 
       - name: Check credentials file
         run: |
-          jq -e '.type == "service_account"' credentials.json > /dev/null && echo "type OK"
-          jq -e '.private_key | startswith("-----BEGIN PRIVATE KEY-----")' credentials.json > /dev/null && echo "private_key header OK"
-          jq -e '.private_key | contains("\\n")' credentials.json > /dev/null && echo "private_key contains literal backslash-n (bad)" || echo "no literal backslash-n"
-          echo "private_key line count: $(jq -r '.private_key' credentials.json | wc -l)"
+          set -euo pipefail
+          if ! jq -e '
+            .type == "service_account" and
+            (.client_email | type == "string" and length > 0) and
+            (.token_uri | type == "string" and length > 0) and
+            (.private_key | type == "string" and
+              startswith("-----BEGIN PRIVATE KEY-----") and
+              endswith("-----END PRIVATE KEY-----") and
+              contains("\n"))
+          ' credentials.json > /dev/null; then
+            echo "::error::Google credentials JSON or private key is invalid. Check GOOGLE_CREDENTIALS and GOOGLE_PRIVATE_KEY."
+            exit 1
+          fi
+          echo "Google service-account credentials structure and private-key format OK."
 
       - name: Run wnr-parkrun-league
         run: Rscript R/wnr-parkrun-league.R
