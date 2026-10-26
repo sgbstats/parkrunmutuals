@@ -4,7 +4,7 @@ library(hms)
 library(googlesheets4)
 source("R/wnr-league-helpers.R")
 load("data/all_parkruns.RDa")
-
+gs4_deauth()
 # Change this mapping and the year when configuring a new league season.
 league_year <- 2026L
 league_events <- c(
