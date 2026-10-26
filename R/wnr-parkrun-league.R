@@ -3,8 +3,9 @@ library(parkrunfunctions)
 library(hms)
 library(googlesheets4)
 source("R/wnr-league-helpers.R")
+source("R/wnr-google-auth.R")
+auth_wnr_sheets()
 load("data/all_parkruns.RDa")
-gs4_deauth()
 # Change this mapping and the year when configuring a new league season.
 league_year <- 2026L
 league_events <- c(
@@ -193,7 +194,6 @@ out <- out |>
   select(name, id, total_pts, any_of(wanted)) |>
   arrange(desc(total_pts))
 
-gs4_auth(path = "credentials.json")
 write_sheet(
   out,
   ss = "https://docs.google.com/spreadsheets/d/1mOPeM1BA2i5gw7tNMn7geTt_yLC4ngjFw2uh6zWl4wE/edit?usp=sharing",
