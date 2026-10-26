@@ -35,6 +35,13 @@ jobs:
           jq --arg key "$GOOGLE_PRIVATE_KEY" '.private_key = $key' \
             <<< "$GOOGLE_CREDENTIALS" > credentials.json
 
+      - name: Check credentials file
+        run: |
+          jq -e '.type == "service_account"' credentials.json > /dev/null && echo "type OK"
+          jq -e '.private_key | startswith("-----BEGIN PRIVATE KEY-----")' credentials.json > /dev/null && echo "private_key header OK"
+          jq -e '.private_key | contains("\\n")' credentials.json > /dev/null && echo "private_key contains literal backslash-n (bad)" || echo "no literal backslash-n"
+          echo "private_key line count: $(jq -r '.private_key' credentials.json | wc -l)"
+
       - name: Run wnr-parkrun-league
         run: Rscript R/wnr-parkrun-league.R
 
