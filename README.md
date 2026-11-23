@@ -75,10 +75,29 @@ Other studies keep their existing checkpoints and share their own raw-result
 caches between dependent scripts. Mutable checkpoints and derived exports are
 updated in place.
 
-Failures are not marked as successful results. Fetch or storage failures prevent
-publication of an incomplete app bundle, and existing successful caches survive
-an interrupted run. Every call to the parkrun website, including failed requests,
-has a 23-second cooling-off period.
+The existing tracked `error_log.txt` is retained as a legacy event-level skip
+list. Failed result requests and invalid results are also recorded by result in
+Supabase under `data/result-errors/`, including the URL, error and timestamp.
+Later runs skip those failures and report omissions as warnings, while continuing
+to fetch other results and publishing the available data. If no results are
+available, the existing bundle is left unchanged. Storage failures stop the
+run; failures to save the error log are never treated as successfully recorded.
+
+To explicitly retry recorded failures, run from the repository root:
+
+```powershell
+Rscript -e "source('R/prmutuals.R'); publish_prmutuals(retry_failed = TRUE)"
+```
+
+Previous failure records are retained even after a successful retry. Existing
+successful results are never refetched. Every call to the parkrun website,
+including failed requests, has a 23-second cooling-off period.
+
+To inspect a recorded failure, use its result filename from the warning:
+
+```powershell
+Rscript -e "source('R/supabase-cache.R'); print(cache_read_rds('data/result-errors/Bad1.csv.rds'))"
+```
 
 ### Tests
 

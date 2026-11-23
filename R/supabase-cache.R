@@ -126,26 +126,72 @@ cache_fetch_rds <- function(
 
 cache_fetch_results <- function(
   paths, urls, fetch = parkrunfunctions::get_result,
-  config = supabase_storage_config(), sleep = Sys.sleep
+  config = supabase_storage_config(), sleep = Sys.sleep,
+  events = rep(NA_character_, length(paths)),
+  legacy_log = "error_log.txt", retry_failed = FALSE
 ) {
   paths <- vapply(paths, cache_key, character(1), USE.NAMES = FALSE)
-  if (length(paths) != length(urls) || anyDuplicated(paths)) {
+  if (
+    length(paths) != length(urls) || length(paths) != length(events) ||
+      anyDuplicated(paths)
+  ) {
     stop("Result paths and URLs must have matching, unique keys", call. = FALSE)
   }
+  legacy_events <- character()
+  if (file.exists(legacy_log)) {
+    legacy <- utils::read.csv(legacy_log, stringsAsFactors = FALSE)
+    if (!"name" %in% names(legacy)) {
+      stop("Legacy error log is missing the name column: ", legacy_log)
+    }
+    legacy_events <- legacy$name[!is.na(legacy$name) & nzchar(legacy$name)]
+  }
   stored <- cache_list("data/results", config)
+  error_paths <- paste0("data/result-errors/", basename(paths), ".rds")
+  logged <- cache_list("data/result-errors", config)
+  skipped <- character()
   for (index in which(!paths %in% stored)) {
+    error_path <- error_paths[index]
+    legacy_failed <- !is.na(events[index]) && events[index] %in% legacy_events
+    if (!retry_failed && (legacy_failed || error_path %in% logged)) {
+      skipped <- c(skipped, paths[index])
+      next
+    }
     legacy_file <- file.exists(paths[index])
     result <- if (legacy_file) {
       list(results = utils::read.csv(paths[index]))
     } else {
-      tryCatch(fetch(url = urls[index]), finally = sleep(23))
+      tryCatch(
+        fetch(url = urls[index]),
+        error = identity,
+        finally = sleep(23)
+      )
     }
-    if (
+    failure <- if (inherits(result, "error")) {
+      conditionMessage(result)
+    } else if (
       !is.list(result) || !is.data.frame(result$results) ||
         !all(c("pos", "parkrunner", "id", "time") %in% names(result$results)) ||
         nrow(result$results) == 0L
     ) {
-      stop("Invalid results returned for ", urls[index], call. = FALSE)
+      "Invalid or empty results returned"
+    } else {
+      NULL
+    }
+    if (!is.null(failure)) {
+      attempts <- if (error_path %in% logged) {
+        cache_read_rds(error_path, config)
+      } else {
+        list()
+      }
+      attempts[[length(attempts) + 1L]] <- list(
+        event = events[index], path = paths[index], url = urls[index],
+        time = format(Sys.time(), tz = "UTC", usetz = TRUE), error = failure
+      )
+      cache_save_rds(attempts, error_path, config)
+      logged <- union(logged, error_path)
+      skipped <- c(skipped, paths[index])
+      warning(sprintf("Result skipped for %s: %s", urls[index], failure), call. = FALSE)
+      next
     }
     # Preserve legacy bytes so the verified migration can still untrack them.
     if (legacy_file) {
@@ -157,6 +203,17 @@ cache_fetch_results <- function(
         config, upsert = FALSE
       )
     }
+    stored <- c(stored, paths[index])
   }
-  invisible(paths)
+  if (length(skipped)) {
+    warning(
+      sprintf(
+        "%d result(s) omitted because of recorded errors: %s%s; see error_log.txt and data/result-errors/ in Supabase",
+        length(skipped), paste(head(skipped, 10L), collapse = ", "),
+        if (length(skipped) > 10L) ", ..." else ""
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(paths[paths %in% stored])
 }

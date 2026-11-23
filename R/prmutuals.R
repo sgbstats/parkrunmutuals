@@ -62,7 +62,8 @@ publish_prmutuals <- function(
   history_fetch = parkrunfunctions::get_all_runs,
   fetch = parkrunfunctions::get_result,
   distance_builder = build_distance_data,
-  sleep = Sys.sleep
+  sleep = Sys.sleep,
+  retry_failed = FALSE
 ) {
   all_parkruns <- list()
   failed_ids <- character()
@@ -125,9 +126,14 @@ publish_prmutuals <- function(
   if (!nrow(combined_df)) {
     stop("No runner results available; the published bundle was not replaced")
   }
-  cache_fetch_results(
-    combined_df$file, combined_df$url, fetch = fetch, config = config, sleep = sleep
+  available <- cache_fetch_results(
+    combined_df$file, combined_df$url, fetch = fetch, config = config, sleep = sleep,
+    events = combined_df$event, retry_failed = retry_failed
   )
+  if (!length(available)) {
+    stop("No event results available; the published bundle was not replaced")
+  }
+  combined_df <- combined_df |> filter(file %in% available)
   result_frames <- setNames(
     lapply(combined_df$file, function(path) {
       cache_read(
@@ -148,8 +154,9 @@ publish_prmutuals <- function(
       return(tibble())
     }
     files <- paste0(folder, res$event, res$event_no, ".csv")
+    indices <- which(files %in% available)
     map2_dfr(
-      files, seq_len(nrow(res)),
+      files[indices], indices,
       function(file, idx) {
         result_frames[[file]] |>
           mutate(

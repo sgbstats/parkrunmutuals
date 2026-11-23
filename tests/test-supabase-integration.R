@@ -76,15 +76,19 @@ with_fake_supabase({
     runner$results$url <- c("event3", "event4")
     runner
   }
-  expect_error(
+  suppressWarnings(expect_error(
     publish_prmutuals(
       "3", as.Date("2026-11-25"), config, new_history,
       function(url) stop("result unavailable"), distances, sleep
     ),
-    "result unavailable"
-  )
+    "No event results available"
+  ))
   stopifnot(identical(previous, store$objects[["parkrunmutuals/data.RDa"]]))
   stopifnot(!cache_exists("data/results/Test Event3.csv", config))
+  stopifnot(
+    length(cache_read_rds("data/result-errors/Test Event3.csv.rds", config)) == 1L,
+    length(cache_read_rds("data/result-errors/Test Event4.csv.rds", config)) == 1L
+  )
   expect_error(
     publish_prmutuals(
       c("1", "2"), as.Date("2026-11-24"), config, history, fetch,
@@ -96,6 +100,36 @@ with_fake_supabase({
   store$fail$GET <- 403L
   suppressWarnings(expect_error(run(), "could not be loaded"))
   stopifnot(identical(previous, store$objects[["parkrunmutuals/data.RDa"]]))
+})
+
+with_fake_supabase({
+  calls <- character()
+  history <- function(id) list(
+    id = id, name = "Runner",
+    results = data.frame(
+      event = c("Bespoke", "Good", "Bad"), event_no = c(1L, 1L, 1L),
+      short = c("bespoke", "good", "bad"), url = c("bespoke", "good", "broken")
+    )
+  )
+  fetch <- function(url) {
+    calls <<- c(calls, url)
+    if (url == "broken") stop("Request failed [404]")
+    list(results = data.frame(pos = 1L, parkrunner = "Runner", id = 1L, time = "25:00"))
+  }
+  distances <- function() list(distance = data.frame(), parkruns_list = data.frame())
+  run <- function() publish_prmutuals(
+    "1", as.Date("2026-11-23"), config, history, fetch, distances, function(x) stopifnot(x == 23)
+  )
+  suppressWarnings(run())
+  stopifnot(identical(calls, c("broken", "good")))
+  bundle_file <- tempfile(fileext = ".RDa")
+  writeBin(store$objects[["parkrunmutuals/data.RDa"]], bundle_file)
+  bundle <- load_parkrunmutuals_bundle(bundle_file)
+  unlink(bundle_file)
+  stopifnot(nrow(bundle$all_results) == 1L, bundle$all_results$event == "Good")
+  suppressWarnings(run())
+  stopifnot(identical(calls, c("broken", "good")))
+  stopifnot(cache_read_rds("data/result-errors/Bad1.csv.rds", config)[[1]]$url == "broken")
 })
 
 with_fake_supabase({
