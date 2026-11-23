@@ -1,7 +1,8 @@
 library(tidyverse)
 library(parkrunfunctions)
 library(glue)
-load("data/pr_done.RDa")
+source("R/supabase-cache.R")
+cache_load("data/pr_done.RDa")
 
 out <- tribble(
   ~"name" , ~"all" , ~"finishes60_150" , ~"finishes150"
@@ -10,9 +11,12 @@ for (i in pr_done) {
   cat(crayon::red(paste0(i, "\n")))
   df <- tryCatch(
     {
-      get_result(
-        glue("https://www.parkrun.org.uk/{i}/results/2026-06-13/"),
-        extra_data = TRUE
+      cache_fetch_rds(
+        sprintf("data/swb/results/%s-2026-06-13.rds", i),
+        function() get_result(
+          glue("https://www.parkrun.org.uk/{i}/results/2026-06-13/"),
+          extra_data = TRUE
+        )
       )[["results"]] |>
         summarise(
           all = n(),
@@ -21,12 +25,9 @@ for (i in pr_done) {
         ) |>
         mutate(name = i)
     },
-    error = function(e) {
-      data.frame(name = i, all = 0, finishes60_150 = 0, finishes150 = 0)
-    }
+    error = function(e) stop("Results for ", i, ": ", conditionMessage(e))
   )
   out <- out |> rbind(df)
-  Sys.sleep(23)
 }
 
-save(out, file = "data/finishes.RDa")
+cache_save(out, file = "data/finishes.RDa")

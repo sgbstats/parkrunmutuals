@@ -1,3 +1,5 @@
+source("R/supabase-cache.R")
+
 league_dates <- function(year, month, today = Sys.Date()) {
   start <- as.Date(sprintf("%04d-%02d-01", year, month))
   end <- seq(start, by = "month", length.out = 2L)[2L] - 1L
@@ -22,11 +24,12 @@ handicap_start <- function(year, month) {
 }
 
 read_league_cache <- function(cache_dir, event) {
-  paths <- list.files(cache_dir, pattern = "\\.RDa$", full.names = TRUE)
+  stored <- cache_list(cache_dir)
+  paths <- stored[grepl("\\.RDa$", stored)]
   paths <- paths[grepl(paste0("^", event, "[0-9]+\\.RDa$"), basename(paths))]
   entries <- lapply(paths, function(path) {
     env <- new.env(parent = emptyenv())
-    keys <- load(path, envir = env)
+    keys <- cache_load(path, envir = env)
     if (length(keys) != 1L) {
       stop("Unexpected cache format: ", path)
     }
@@ -45,7 +48,7 @@ read_league_cache <- function(cache_dir, event) {
       result = x
     )
   })
-  date_paths <- list.files(cache_dir, pattern = "\\.rds$", full.names = TRUE)
+  date_paths <- stored[grepl("\\.rds$", stored)]
   date_paths <- date_paths[grepl(
     paste0("^", event, "-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.rds$"),
     basename(date_paths)
@@ -68,7 +71,7 @@ read_league_cache <- function(cache_dir, event) {
           numbered_dates
       ],
       function(path) {
-        x <- readRDS(path)
+        x <- cache_read_rds(path)
         expected <- sub(
           "\\.rds$",
           "",
@@ -121,12 +124,11 @@ fetch_league_month <- function(
   sleep = Sys.sleep,
   history_fetch = parkrunfunctions::get_event_history
 ) {
-  dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
   dates <- dates[dates <= Sys.Date()]
   entries <- read_league_cache(cache_dir, event)
   # A cached history resolves cancelled dates and event numbers in new months.
   history_path <- file.path(cache_dir, paste0(event, "-history.rds"))
-  history <- if (file.exists(history_path)) readRDS(history_path) else NULL
+  history <- if (cache_exists(history_path)) cache_read_rds(history_path) else NULL
   history_refreshed <- FALSE
   cached_dates <- as.Date(vapply(
     entries,
@@ -147,7 +149,7 @@ fetch_league_month <- function(
       },
       finally = sleep(23)
     )
-    if (!is.null(history)) saveRDS(history, history_path)
+    if (!is.null(history)) cache_save_rds(history, history_path)
   }
   for (index in seq_along(dates)) {
     date <- dates[index]
@@ -180,7 +182,7 @@ fetch_league_month <- function(
       )
       if (!is.null(refreshed)) {
         history <- refreshed
-        saveRDS(history, history_path)
+        cache_save_rds(history, history_path)
       }
     }
     event_no <- NA_integer_
@@ -214,17 +216,24 @@ fetch_league_month <- function(
       ))
       next
     }
+    if (!is.data.frame(x$results) || !is.data.frame(x$volunteers)) {
+      warning(sprintf("%s on %s returned incomplete results; ignoring", event, date))
+      next
+    }
     if (!is.na(event_no)) {
       key <- paste0(event, event_no)
       env <- new.env(parent = emptyenv())
       env[[key]] <- x
-      save(
-        list = key,
-        file = file.path(cache_dir, paste0(key, ".RDa")),
-        envir = env
+      cache_write(
+        file.path(cache_dir, paste0(key, ".RDa")), key,
+        function(key, file) save(list = key, file = file, envir = env),
+        upsert = FALSE
       )
     } else {
-      saveRDS(x, file.path(cache_dir, sprintf("%s-%s.rds", event, date)))
+      cache_write(
+        file.path(cache_dir, sprintf("%s-%s.rds", event, date)), x, saveRDS,
+        upsert = FALSE
+      )
     }
     entries[[length(entries) + 1L]] <- list(
       date = date,

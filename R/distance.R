@@ -4,7 +4,10 @@ library(RJSONIO)
 library(stringi)
 
 build_distance_data <- function() {
-  parkrunsall <- fromJSON("https://images.parkrun.com/events.json")
+  parkrunsall <- tryCatch(
+    fromJSON("https://images.parkrun.com/events.json"),
+    finally = Sys.sleep(23)
+  )
   features <- parkrunsall$events$features
 
   parkruns <- purrr::map_dfr(features, function(feature) {

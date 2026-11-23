@@ -7,7 +7,7 @@ library(stringi)
 
 # pak::pak("sgbstats/parkrunfunctions")
 library(parkrunfunctions)
-source("R/supabase-storage.R")
+source("R/supabase-cache.R")
 source("R/distance.R")
 
 ids <- tribble(
@@ -55,213 +55,136 @@ ids <- tribble(
   "5401482"  , #britt
 )
 
-all_parkruns <- list()
-failed_ids <- character()
-for (i in ids$id) {
-  hold <- tryCatch(
-    parkrunfunctions::get_all_runs(i),
-    error = function(e) {
-      warning(sprintf("Could not fetch runner %s: %s", i, conditionMessage(e)))
-      NULL
-    },
-    finally = Sys.sleep(25)
-  )
-  if (
-    is.null(hold) ||
-      length(hold$name) != 1L ||
-      is.na(hold$name) ||
-      !nzchar(trimws(hold$name))
-  ) {
-    warning(sprintf("Skipping runner %s: no valid name returned", i))
-    failed_ids <- c(failed_ids, i)
-    next
-  }
-  key <- str_to_lower(str_remove_all(hold$name, "\\s"))
-  if (key %in% names(all_parkruns)) {
-    warning(sprintf("Skipping runner %s: duplicate name key %s", i, key))
-    failed_ids <- c(failed_ids, i)
-    next
-  }
-  message(hold$name)
-  all_parkruns[[key]] <- hold
-}
-if (length(failed_ids)) {
-  stop(
-    "Runner histories could not be loaded for IDs: ",
-    paste(failed_ids, collapse = ", "),
-    ". Existing data/all_parkruns.RDa was not overwritten; retry later."
-  )
-}
-all_parkruns[["names_ids"]] <- map_dfr(
-  all_parkruns,
-  ~ tibble(
-    name = .x[["name"]],
-    id = .x[["id"]]
-  )
-)
-
-save(all_parkruns, file = "data/all_parkruns.RDa")
-load("data/all_parkruns.RDa")
-
-
-folder <- "data/results/"
-combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
-  dplyr::select(event, event_no, url) |>
-  dplyr::distinct() |>
-  arrange(event, event_no) |>
-  mutate(file = paste0(folder, event, event_no, ".csv"))
-
-# x2=all_parkruns[names(all_parkruns) == "sebbate"]
-# combined_df2 <- purrr::map_df(x2, ~ .x[["results"]]) |>
-#   dplyr::select(event, event_no, url) |>
-#   dplyr::distinct() |>
-#   arrange(event, event_no) |>
-#   mutate(file = paste0(folder, event, event_no, ".csv"))
-
-ls <- list.files("data/results", full.names = T)
-
-filtered_df <- combined_df |>
-  filter_out(file %in% ls) #|>
-#filter(grepl("[O-Z]", substr(event, 1, 1))) # to split the work
-
-skip_errors <- T
-log_file <- "error_log.txt"
-
-for (i in 1:nrow(filtered_df)) {
-  errors <- read.csv(log_file, header = T)
-  if (filtered_df$event[i] %in% errors$name && skip_errors) {
-    next
-  }
-  cat(paste(filtered_df$event[i], filtered_df$event_no[i], "\n"))
-  tryCatch(
-    {
-      get_result(url = filtered_df$url[i])[["results"]] |>
-        write.csv(filtered_df$file[i], row.names = F)
-      Sys.sleep(30)
-    },
-    error = function(e) {
-      message(conditionMessage(e))
-      write(
-        paste(filtered_df$event[i], filtered_df$event_no[i], sep = ","),
-        file = log_file,
-        append = TRUE
-      )
-    },
-    warning = function(e) {
-      message(conditionMessage(e))
+publish_prmutuals <- function(
+  runner_ids = ids$id,
+  today = Sys.Date(),
+  config = supabase_storage_config(),
+  history_fetch = parkrunfunctions::get_all_runs,
+  fetch = parkrunfunctions::get_result,
+  distance_builder = build_distance_data,
+  sleep = Sys.sleep
+) {
+  all_parkruns <- list()
+  failed_ids <- character()
+  for (i in runner_ids) {
+    hold <- tryCatch(
+      cache_fetch_rds(
+        sprintf("data/runner-histories/%s/%s.rds", i, today),
+        function() {
+          runner <- history_fetch(i)
+          if (
+            length(runner$name) != 1L || is.na(runner$name) ||
+              !nzchar(trimws(runner$name)) || !is.data.frame(runner$results) ||
+              !all(c("event", "event_no", "url", "short") %in% names(runner$results)) ||
+              length(runner$id) != 1L || is.na(runner$id) ||
+              as.character(runner$id) != as.character(i)
+          ) {
+            stop("Runner history has no valid name, ID or results")
+          }
+          runner
+        },
+        config = config,
+        sleep = sleep
+      ),
+      error = function(e) {
+        warning(sprintf("Could not fetch runner %s: %s", i, conditionMessage(e)))
+        NULL
+      }
+    )
+    if (is.null(hold)) {
+      failed_ids <- c(failed_ids, i)
+      next
     }
+    key <- str_to_lower(str_remove_all(hold$name, "\\s"))
+    if (key %in% names(all_parkruns)) {
+      warning(sprintf("Skipping runner %s: duplicate name key %s", i, key))
+      failed_ids <- c(failed_ids, i)
+      next
+    }
+    message(hold$name)
+    all_parkruns[[key]] <- hold
+  }
+  if (length(failed_ids)) {
+    stop(
+      "Runner histories could not be loaded for IDs: ",
+      paste(failed_ids, collapse = ", "),
+      ". Existing Supabase runner histories were not overwritten; retry later."
+    )
+  }
+  all_parkruns[["names_ids"]] <- map_dfr(
+    all_parkruns,
+    ~ tibble(name = .x[["name"]], id = .x[["id"]])
   )
-}
 
-all_results <- tribble(
-  ~"name" , ~"event" , ~"event_no" , ~"pos" , ~"parkrunner" , ~"time" , ~"short"
-)
-folder <- "data/results/"
-# r
-library(furrr)
-library(purrr)
-library(dplyr)
-library(readr)
-
-library(future)
-library(parallelly)
-
-future::plan(
-  multisession,
-  workers = availableCores()
-)
-
-names_list <- names(all_parkruns)[names(all_parkruns) != "names_ids"]
-
-all_results_list <- future_map(
-  names_list,
-  function(j) {
+  folder <- "data/results/"
+  combined_df <- purrr::map_df(all_parkruns, ~ .x[["results"]]) |>
+    dplyr::select(event, event_no, url) |>
+    dplyr::distinct() |>
+    arrange(event, event_no) |>
+    mutate(file = paste0(folder, event, event_no, ".csv"))
+  if (!nrow(combined_df)) {
+    stop("No runner results available; the published bundle was not replaced")
+  }
+  cache_fetch_results(
+    combined_df$file, combined_df$url, fetch = fetch, config = config, sleep = sleep
+  )
+  result_frames <- setNames(
+    lapply(combined_df$file, function(path) {
+      cache_read(
+        path,
+        function(file) readr::read_csv(
+          file, show_col_types = FALSE,
+          col_types = readr::cols(pos = readr::col_integer(), id = readr::col_integer())
+        ),
+        config
+      )
+    }),
+    combined_df$file
+  )
+  names_list <- names(all_parkruns)[names(all_parkruns) != "names_ids"]
+  all_results_list <- map(names_list, function(j) {
     res <- all_parkruns[[j]][["results"]]
-    if (nrow(res) == 0) {
+    if (nrow(res) == 0L) {
       return(tibble())
     }
-
     files <- paste0(folder, res$event, res$event_no, ".csv")
-
-    future_map2_dfr(
-      files,
-      seq_len(nrow(res)),
+    map2_dfr(
+      files, seq_len(nrow(res)),
       function(file, idx) {
-        if (!file.exists(file)) {
-          return(tibble())
-        }
-        # Option A: force pos as numeric while reading
-        read_csv(
-          file,
-          col_types = cols(pos = col_integer(), id = col_integer()),
-          show_col_types = FALSE
-        ) |>
+        result_frames[[file]] |>
           mutate(
             name = all_parkruns[[j]][["name"]],
             event = res$event[idx],
             short = res$short[idx],
             event_no = res$event_no[idx]
           )
-
-        # Option B: coerce after reading (keeps readr auto-detect then fixes)
-        read_csv(file, show_col_types = FALSE) |>
-          mutate(
-            pos = as.integer(pos),
-            id = as.integer(id),
-            name = all_parkruns[[j]][["name"]],
-            event = res$event[idx],
-            short = res$short[idx],
-            event_no = res$event_no[idx]
-          )
-      },
-      .options = furrr_options(seed = NULL)
+      }
     )
-  },
-  .options = furrr_options(seed = NULL)
-)
+  })
+  all_results <- bind_rows(all_results_list)
+  runners <- unique(all_results$name)
+  parkruns <- sort(unique(all_results$event))
+  events_done <- all_results |> count(name, event) |> dplyr::select(-n)
+  date <- today
+  names_ids <- all_parkruns[["names_ids"]]
+  names_all <- all_results |> count(name, parkrunner, id)
+  distance_data <- distance_builder()
+  distance <- distance_data$distance
+  parkruns_list <- distance_data$parkruns_list
 
-all_results <- bind_rows(all_results_list)
+  bundle_path <- tempfile(fileext = ".RDa")
+  on.exit(unlink(bundle_path), add = TRUE)
+  save(
+    all_results, runners, parkruns, date, events_done, names_ids, names_all,
+    distance, parkruns_list, file = bundle_path
+  )
+  load_parkrunmutuals_bundle(bundle_path)
+  cache_save(all_parkruns, file = "data/all_parkruns.RDa", config = config)
+  supabase_upload_object(bundle_path, config = config)
+  verify_parkrunmutuals_bundle(config = config)
+  message("Supabase publication completed successfully.")
+  invisible(TRUE)
 
+}
 
-runners <- unique(all_results$name)
-parkruns <- sort(unique(all_results$event))
-events_done <- all_results |> count(name, event) |> dplyr::select(-n)
-date <- Sys.Date()
-
-names_ids <- all_parkruns[["names_ids"]]
-names_all <- all_results |>
-  count(name, parkrunner, id)
-save(
-  all_results,
-  runners,
-  parkruns,
-  date,
-  events_done,
-  names_ids,
-  names_all,
-  file = "data/all_results.RDa"
-)
-
-distance_data <- build_distance_data()
-distance <- distance_data$distance
-parkruns_list <- distance_data$parkruns_list
-
-bundle_path <- tempfile(fileext = ".RDa")
-on.exit(unlink(bundle_path), add = TRUE)
-save(
-  all_results,
-  runners,
-  parkruns,
-  date,
-  events_done,
-  names_ids,
-  names_all,
-  distance,
-  parkruns_list,
-  file = bundle_path
-)
-
-supabase_config <- supabase_storage_config()
-supabase_upload_object(bundle_path, config = supabase_config)
-verify_parkrunmutuals_bundle(config = supabase_config)
-message("Supabase publication completed successfully.")
+if (sys.nframe() == 0L) publish_prmutuals()

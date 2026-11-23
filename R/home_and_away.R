@@ -1,7 +1,6 @@
 library(tidyverse)
 library(parkrunfunctions)
 library(lubridate)
-library(ggalluvial)
 
 # One-time study of where runners from GM home parkruns go when their home event is cancelled.
 # Any loop that calls parkrunfunctions must sleep for 23 seconds after each call.
@@ -34,7 +33,7 @@ gm <- c(
   "Kingsway Park, Urmston"
 )
 
-source("R/supabase-storage.R")
+source("R/supabase-cache.R")
 
 load_supabase_bundle <- function() {
   destination <- tempfile(fileext = ".RDa")
@@ -46,31 +45,25 @@ load_supabase_bundle <- function() {
 cache_root <- file.path("data", "home_and_away", "cache")
 event_cache_dir <- file.path(cache_root, "events")
 runner_cache_dir <- file.path(cache_root, "runners")
-dir.create(event_cache_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(runner_cache_dir, recursive = TRUE, showWarnings = FALSE)
 
 get_event_history_safe <- function(event_slug) {
   message("Event history: ", event_slug)
-  res <- tryCatch(
-    parkrunfunctions::get_event_history(event = event_slug),
-    error = function(e) NULL
+  cache_fetch_rds(
+    file.path(cache_root, "histories", paste0(event_slug, ".rds")),
+    function() parkrunfunctions::get_event_history(event = event_slug)
   )
-  Sys.sleep(23)
-  res
 }
 
 get_event_results_safe <- function(event_slug, event_no) {
   message("  Results: ", event_slug, " #", event_no)
-  res <- tryCatch(
-    parkrunfunctions::get_result(
+  cache_fetch_rds(
+    file.path(cache_root, "results", paste0(event_slug, "-", event_no, ".rds")),
+    function() parkrunfunctions::get_result(
       event = event_slug,
       event_no = event_no,
       as_Date = TRUE
-    ),
-    error = function(e) NULL
+    )
   )
-  Sys.sleep(23)
-  res
 }
 
 runner_cache_file <- function(runner_id) {
@@ -83,17 +76,16 @@ event_cache_file <- function(event_slug) {
 
 get_runner_runs_safe <- function(runner_id) {
   cache_file <- runner_cache_file(runner_id)
-  if (file.exists(cache_file)) {
+  if (cache_exists(cache_file)) {
     message("Runner: ", runner_id, " [cached]")
-    return(readRDS(cache_file))
+    return(cache_read_rds(cache_file))
   }
 
   message("Runner: ", runner_id)
-  res <- tryCatch(
-    parkrunfunctions::get_all_runs(id = runner_id, as_Date = TRUE),
-    error = function(e) NULL
+  res <- cache_fetch_rds(
+    file.path(cache_root, "runner-histories", paste0(runner_id, ".rds")),
+    function() parkrunfunctions::get_all_runs(id = runner_id, as_Date = TRUE)
   )
-  Sys.sleep(23)
 
   if (is.null(res)) {
     return(NULL)
@@ -103,16 +95,16 @@ get_runner_runs_safe <- function(runner_id) {
     dplyr::select(event_date, event, short) |>
     mutate(runner_id = runner_id)
 
-  saveRDS(out, cache_file)
+  cache_save_rds(out, cache_file)
   out
 }
 
 load_event_checkpoint <- function(path) {
-  if (!file.exists(path)) {
+  if (!cache_exists(path)) {
     return(list(detail = tibble(), next_j = 1L, finished = FALSE))
   }
 
-  x <- readRDS(path)
+  x <- cache_read_rds(path)
   if (is.list(x) && !is.null(x$detail) && !is.null(x$next_j)) {
     return(x)
   }
@@ -121,7 +113,7 @@ load_event_checkpoint <- function(path) {
 }
 
 save_event_checkpoint <- function(path, detail, next_j, finished = FALSE) {
-  saveRDS(
+  cache_save_rds(
     list(detail = detail, next_j = next_j, finished = finished),
     path
   )
@@ -281,9 +273,9 @@ resolve_gap_week <- function(detail) {
 
   for (runner_id in runner_ids) {
     cache_file <- runner_cache_file(runner_id)
-    if (file.exists(cache_file)) {
+    if (cache_exists(cache_file)) {
       message("Runner: ", runner_id, " [cached]")
-      runner_runs[[as.character(runner_id)]] <- readRDS(cache_file)
+      runner_runs[[as.character(runner_id)]] <- cache_read_rds(cache_file)
       next
     }
 
@@ -359,12 +351,10 @@ main <- function() {
     arrange(home_parkrun, desc(runners), gap_week_parkrun)
 
   out_dir <- file.path("data", "home_and_away")
-  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-
-  write_csv(detail, file.path(out_dir, "gm_home_and_away_detail.csv"))
-  write_csv(summary, file.path(out_dir, "gm_home_and_away_summary.csv"))
-  saveRDS(detail, file.path(out_dir, "gm_home_and_away_detail.rds"))
-  saveRDS(summary, file.path(out_dir, "gm_home_and_away_summary.rds"))
+  cache_write_csv(detail, file.path(out_dir, "gm_home_and_away_detail.csv"))
+  cache_write_csv(summary, file.path(out_dir, "gm_home_and_away_summary.csv"))
+  cache_save_rds(detail, file.path(out_dir, "gm_home_and_away_detail.rds"))
+  cache_save_rds(summary, file.path(out_dir, "gm_home_and_away_summary.rds"))
 
   invisible(list(detail = detail, summary = summary))
 }
@@ -376,8 +366,9 @@ if (sys.nframe() == 0) {
 
 ##analysis
 library(tidyverse)
-detail <- read_csv("data/home_and_away/gm_home_and_away_detail.csv")
-summary <- read_csv("data/home_and_away/gm_home_and_away_summary.csv")
+library(ggalluvial)
+detail <- cache_read_csv("data/home_and_away/gm_home_and_away_detail.csv")
+summary <- cache_read_csv("data/home_and_away/gm_home_and_away_summary.csv")
 
 detail |>
   summarise(
@@ -392,7 +383,7 @@ detail |>
     "total_runners" = total_runners,
     "average_runners_per_pr" = average_runners_per_pr
   ) |>
-  write_csv("data/home_and_away/gm_home_and_away_summary_by_pr.csv")
+  cache_write_csv("data/home_and_away/gm_home_and_away_summary_by_pr.csv")
 
 
 summary2 <- summary |>
@@ -429,7 +420,7 @@ summary |>
   mutate(pc = 100 * runners / sum(runners)) |>
   arrange(desc(runners)) |>
   filter(runners >= 10) |>
-  write.csv("data/home_and_away/runners_share.csv")
+  cache_write_csv("data/home_and_away/runners_share.csv")
 
 make_home_sankey_plot <- function(home_name, data, include_did_not_run = TRUE) {
   plot_data <- data |>

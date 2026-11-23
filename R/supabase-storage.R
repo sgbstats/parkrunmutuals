@@ -69,7 +69,8 @@ supabase_upload_object <- function(
   local_path,
   object_path = "parkrunmutuals/data.RDa",
   config = supabase_storage_config(),
-  timeout_seconds = 120
+  timeout_seconds = 120,
+  upsert = TRUE
 ) {
   if (!file.exists(local_path)) {
     stop("Local upload file does not exist: ", local_path, call. = FALSE)
@@ -86,7 +87,7 @@ supabase_upload_object <- function(
       .headers = c(
         supabase_storage_headers(config),
         `Content-Type` = "application/octet-stream",
-        `x-upsert` = "true"
+        `x-upsert` = if (upsert) "true" else "false"
       )
     ),
     body = bytes,
@@ -196,5 +197,16 @@ verify_parkrunmutuals_bundle <- function(
   on.exit(unlink(destination), add = TRUE)
   supabase_download_object(object_path, destination, config = config)
   load_parkrunmutuals_bundle(destination)
+  invisible(TRUE)
+}
+
+load_parkrunmutuals_data <- function(
+  envir = parent.frame(), config = supabase_storage_config()
+) {
+  destination <- tempfile(fileext = ".RDa")
+  on.exit(unlink(destination), add = TRUE)
+  supabase_download_object(destination = destination, config = config)
+  bundle <- load_parkrunmutuals_bundle(destination)
+  list2env(as.list(bundle), envir = envir)
   invisible(TRUE)
 }

@@ -1,6 +1,9 @@
+source("R/supabase-cache.R")
 runner_id <- "1026950"
-history <- parkrunfunctions::get_all_runs(id = runner_id)
-Sys.sleep(23)
+history <- cache_fetch_rds(
+  sprintf("data/volunteer-check/runners/%s/%s.rds", runner_id, Sys.Date()),
+  function() parkrunfunctions::get_all_runs(id = runner_id)
+)
 
 if (is.null(history)) {
   stop("Could not retrieve the runner's results")
@@ -15,12 +18,9 @@ volunteer_roles <- data.frame(
 
 for (i in seq_len(nrow(runs))) {
   svMisc::progress(i, nrow(runs), progress.bar = TRUE)
-  result <- tryCatch(
-    parkrunfunctions::get_result(url = runs$url[i]),
-    error = function(e) {
-      warning(conditionMessage(e))
-      NULL
-    }
+  result <- cache_fetch_rds(
+    sprintf("data/volunteer-check/results/%s%s.rds", runs$event[i], runs$event_no[i]),
+    function() parkrunfunctions::get_result(url = runs$url[i])
   )
   if (is.null(result)) {
     next
@@ -41,7 +41,6 @@ for (i in seq_len(nrow(runs))) {
       )
     )
   }
-  Sys.sleep(23)
 }
 
 volunteer_roles

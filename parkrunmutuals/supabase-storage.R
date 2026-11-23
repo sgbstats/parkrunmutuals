@@ -151,3 +151,14 @@ load_parkrunmutuals_bundle <- function(path) {
 
   bundle
 }
+
+load_parkrunmutuals_data <- function(
+  envir = parent.frame(), config = supabase_storage_config()
+) {
+  destination <- tempfile(fileext = ".RDa")
+  on.exit(unlink(destination), add = TRUE)
+  supabase_download_object(destination = destination, config = config)
+  bundle <- load_parkrunmutuals_bundle(destination)
+  list2env(as.list(bundle), envir = envir)
+  invisible(TRUE)
+}

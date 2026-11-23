@@ -1,3 +1,5 @@
+source("supabase-storage.R")
+load_parkrunmutuals_data()
 input = list()
 input$group = "adapat"
 input$name = "Rachel BROWN"

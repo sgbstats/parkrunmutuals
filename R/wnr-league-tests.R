@@ -1,4 +1,7 @@
+source("tests/fake-supabase.R")
 source("R/wnr-league-helpers.R")
+
+with_fake_supabase({
 
 stopifnot(
   identical(
@@ -28,8 +31,7 @@ stopifnot(identical(
 entries[[2L]]$event_no <- 690L
 stopifnot(length(confirmed_missing_dates(entries, as.Date("2026-08-29"))) == 0L)
 
-cache_dir <- tempfile("wnr-test-")
-dir.create(cache_dir)
+cache_dir <- "data/wnr-test"
 calls <- 0L
 sleeps <- numeric()
 mock_sleep <- function(seconds) sleeps <<- c(sleeps, seconds)
@@ -122,4 +124,5 @@ fetch_league_month(
   mock_history
 )
 stopifnot(calls == 4L, identical(sleeps, rep(23, 7)))
-unlink(cache_dir, recursive = TRUE)
+})
+cat("Remote league cache tests passed\n")

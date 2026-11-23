@@ -7,12 +7,7 @@ library(DT)
 source("supabase-storage.R")
 
 load_supabase_bundle <- function() {
-  destination <- tempfile(fileext = ".RDa")
-  on.exit(unlink(destination), add = TRUE)
-  supabase_download_object(destination = destination)
-  bundle <- load_parkrunmutuals_bundle(destination)
-  list2env(as.list(bundle), envir = .GlobalEnv)
-  invisible(TRUE)
+  load_parkrunmutuals_data(envir = .GlobalEnv)
 }
 
 load_supabase_bundle()

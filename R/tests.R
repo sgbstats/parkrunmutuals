@@ -1,3 +1,5 @@
+source("R/supabase-storage.R")
+load_parkrunmutuals_data()
 library(dplyr)
 all_results |>
   summarise(people = n_distinct(parkrunner) - 1, .by = "name")
