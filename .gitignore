@@ -45,3 +45,9 @@ sankey_plots/
 
 # Posit Assistant plans
 .posit/assistant/plans/
+
+# Runtime datasets live in Supabase; local migration copies must not be re-added.
+/data/
+/*.RDa
+/parkrunmutuals/*.RDa
+/error_log.txt

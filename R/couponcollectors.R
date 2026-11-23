@@ -57,7 +57,8 @@ x <- survival::survfit(
 x
 
 
-load("data/swb_id.RDa")
+source("R/supabase-cache.R")
+cache_load("data/swb_id.RDa")
 fit <- survival::survfit(
   Surv(events, swb) ~ 1,
   data = id_done

@@ -1,0 +1,36 @@
+name: Storage regression tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::tidyverse
+            any::httr
+            any::jsonlite
+            any::rvest
+            any::xml2
+            any::stringi
+            any::geosphere
+            any::RJSONIO
+            any::hms
+            any::googlesheets4
+            any::glue
+            any::rbenchmark
+            any::svMisc
+            sgbstats/parkrunfunctions
+      - run: Rscript tests/run-tests.R

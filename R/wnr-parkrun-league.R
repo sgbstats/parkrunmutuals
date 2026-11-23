@@ -5,7 +5,7 @@ library(googlesheets4)
 source("R/wnr-league-helpers.R")
 source("R/wnr-google-auth.R")
 auth_wnr_sheets()
-load("data/all_parkruns.RDa")
+cache_load("data/all_parkruns.RDa")
 # Change this mapping and the year when configuring a new league season.
 league_year <- 2026L
 league_events <- c(

@@ -1,4 +1,5 @@
-load("data/all_parkruns.RDa")
+source("R/supabase-cache.R")
+cache_load("data/all_parkruns.RDa")
 
 library(tidyverse)
 library(httr)
@@ -10,10 +11,12 @@ all_results_test <- tribble(
   ~"event" , ~"event_no" , ~"pos" , ~"parkrunner" , ~"id" , ~"time" , ~"short"
 )
 folder <- "data/results/"
-ls <- list.files("data/results", full.names = T)
+ls <- cache_list("data/results")
+result_frames <- setNames(lapply(ls, cache_read_csv), ls)
+benchmark_file <- tempfile(fileext = ".csv")
 for (i in ls) {
   all_results_test |>
-    rbind.data.frame(read.csv(i)) -> all_results_test
+    rbind.data.frame(result_frames[[i]]) -> all_results_test
 }
 
 rbenchmark::benchmark(
@@ -29,8 +32,8 @@ rbenchmark::benchmark(
         short <- all_parkruns[[j]][["results"]][["short"]][i]
         event_no <- all_parkruns[[j]][["results"]][["event_no"]][i]
         file <- paste0(folder, event, event_no, ".csv")
-        if (file.exists(file)) {
-          x <- read.csv(file) |>
+        if (file %in% names(result_frames)) {
+          x <- result_frames[[file]] |>
             mutate(
               name = all_parkruns[[j]][["name"]],
               event = all_parkruns[[j]][["results"]][["event"]][i],
@@ -49,7 +52,7 @@ rbenchmark::benchmark(
     )
 
     x |>
-      write.csv("data/all_results.csv", row.names = F)
+      write.csv(benchmark_file, row.names = F)
 
     for (j in "alexbuckley") {
       #cat(crayon::blue(paste(j, "\n")))
@@ -58,8 +61,8 @@ rbenchmark::benchmark(
         short <- all_parkruns[[j]][["results"]][["short"]][i]
         event_no <- all_parkruns[[j]][["results"]][["event_no"]][i]
         file <- paste0(folder, event, event_no, ".csv")
-        if (file.exists(file)) {
-          read.csv(file) |>
+        if (file %in% names(result_frames)) {
+          result_frames[[file]] |>
             mutate(
               name = all_parkruns[[j]][["name"]],
               event = all_parkruns[[j]][["results"]][["event"]][i],
@@ -68,7 +71,7 @@ rbenchmark::benchmark(
             ) |>
             select(all_of(names(x))) |>
             write.table(
-              "data/all_results.csv",
+              benchmark_file,
               row.names = F,
               col.names = F,
               sep = ",",
@@ -77,7 +80,8 @@ rbenchmark::benchmark(
         }
       }
     }
-    all_results <- read.csv("data/all_results.csv")
+    all_results <- read.csv(benchmark_file)
   },
   replications = 10
 )
+unlink(benchmark_file)

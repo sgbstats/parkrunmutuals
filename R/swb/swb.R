@@ -1,6 +1,7 @@
 library(tidyverse)
 library(parkrunfunctions)
 library(glue)
+source("R/supabase-cache.R")
 
 
 coupon_event_time <- function(vec) {
@@ -31,7 +32,10 @@ coupon_event_time <- function(vec) {
 }
 
 
-parkrunsall <- RJSONIO::fromJSON("https://images.parkrun.com/events.json")
+parkrunsall <- cache_fetch_rds(
+  "data/swb/events.rds",
+  function() RJSONIO::fromJSON("https://images.parkrun.com/events.json")
+)
 nevents <- length(parkrunsall$events$features)
 
 short <- character(nevents)
@@ -82,14 +86,14 @@ parkrunsuk <- cbind.data.frame(
 #   ~"id" , ~"event" , ~"time"
 # )
 
-if (file.exists("data/pr_done.RDa")) {
-  load("data/pr_done.RDa")
+if (cache_exists("data/pr_done.RDa")) {
+  cache_load("data/pr_done.RDa")
 } else {
   pr_done <- character(0)
 }
 
-if (file.exists("data/swb_id.RDa")) {
-  load("data/swb_id.RDa")
+if (cache_exists("data/swb_id.RDa")) {
+  cache_load("data/swb_id.RDa")
 } else {
   id_done <- tribble(
     ~"id" , ~"events" , ~"swb" , ~"distinct_events" , ~"tq"
@@ -107,13 +111,17 @@ for (i in parkrunsuk) {
   # try to get df; on error return NULL so we can `next` from the outer for-loop
   df <- tryCatch(
     {
-      get_result(
-        glue("https://www.parkrun.org.uk/{i}/results/2026-06-13/"),
-        extra_data = TRUE
+      cache_fetch_rds(
+        sprintf("data/swb/results/%s-2026-06-13.rds", i),
+        function() get_result(
+          glue("https://www.parkrun.org.uk/{i}/results/2026-06-13/"),
+          extra_data = TRUE
+        )
       )[["results"]] |>
         filter(finishes >= 150)
     },
     error = function(e) {
+      warning(sprintf("Results for %s: %s", i, conditionMessage(e)))
       error_counter <<- error_counter + 1
       if (error_counter >= 10) {
         stop("10 consecutive errors — stopping execution")
@@ -123,14 +131,12 @@ for (i in parkrunsuk) {
   )
 
   if (is.null(df)) {
-    pr_done <- c(pr_done, i)
-    save(pr_done, file = "data/pr_done.RDa")
     next
   }
 
-  # success: reset counter and pause
+  # Only checkpoint an event once every eligible runner has been processed.
   error_counter <- 0
-  Sys.sleep(10)
+  runners_failed <- FALSE
 
   for (j in df$id) {
     if (j %in% id_done$id) {
@@ -141,7 +147,10 @@ for (i in parkrunsuk) {
 
     tryCatch(
       {
-        x <- get_all_runs(j, as_Date = TRUE, as_hms = FALSE)
+        x <- cache_fetch_rds(
+          sprintf("data/swb/runners/%s/%s.rds", j, Sys.Date()),
+          function() get_all_runs(j, as_Date = TRUE, as_hms = FALSE)
+        )
 
         y <- x[["results"]] |>
           mutate(event_date = as.Date(event_date)) |>
@@ -175,13 +184,13 @@ for (i in parkrunsuk) {
             )
           )
 
-        save(id_done, file = "data/swb_id.RDa")
-
-        Sys.sleep(23)
+        cache_save(id_done, file = "data/swb_id.RDa")
 
         error_counter <- 0
       },
       error = function(e) {
+        runners_failed <<- TRUE
+        warning(sprintf("Runner %s: %s", j, conditionMessage(e)))
         error_counter <<- error_counter + 1
 
         if (error_counter >= 10) {
@@ -191,6 +200,8 @@ for (i in parkrunsuk) {
       }
     )
   }
-  pr_done <- c(pr_done, i)
-  save(pr_done, file = "data/pr_done.RDa")
+  if (!runners_failed) {
+    pr_done <- c(pr_done, i)
+    cache_save(pr_done, file = "data/pr_done.RDa")
+  }
 }

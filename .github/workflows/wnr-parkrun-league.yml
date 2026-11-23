@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   run-league:
@@ -26,6 +26,7 @@ jobs:
             any::hms
             any::googlesheets4
             any::jsonlite
+            any::httr
             sgbstats/parkrunfunctions
 
       - name: Run wnr-parkrun-league
@@ -33,12 +34,7 @@ jobs:
           # Full service-account JSON; a separate private-key override is optional.
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://uapfyikxspmcifgdergl.supabase.co' }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          PARKRUNMUTUALS_SUPABASE_BUCKET: ${{ vars.PARKRUNMUTUALS_SUPABASE_BUCKET || 'prmutuals' }}
         run: Rscript R/wnr-parkrun-league.R
-
-      - name: Commit updated cache
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/wnr
-          git diff --cached --quiet || git commit -m "Update wnr league cache"
-          git push

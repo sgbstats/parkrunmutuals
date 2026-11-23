@@ -1,4 +1,5 @@
-load("data/swb_id.RDa")
+source("R/supabase-cache.R")
+cache_load("data/swb_id.RDa")
 library(tidyverse)
 library(parkrunfunctions)
 library(glue)
@@ -33,7 +34,8 @@ coupon_event_time_double <- function(vec) {
 # id_done2 = tribble(
 #   ~"id" , ~"event" , ~"time"
 # )
-load("data/swb_id2.RDa")
+cache_load("data/swb_id2.RDa")
+error_counter <- 0L
 df <- id_done |> filter(swb == 1)
 
 for (j in df$id) {
@@ -45,7 +47,10 @@ for (j in df$id) {
 
   tryCatch(
     {
-      x <- get_all_runs(j, as_Date = TRUE, as_hms = FALSE)
+      x <- cache_fetch_rds(
+        sprintf("data/swb/runners/%s/%s.rds", j, Sys.Date()),
+        function() get_all_runs(j, as_Date = TRUE, as_hms = FALSE)
+      )
 
       y <- x[["results"]] |>
         mutate(event_date = as.Date(event_date)) |>
@@ -79,13 +84,12 @@ for (j in df$id) {
           )
         )
 
-      save(id_done2, file = "data/swb_id2.RDa")
-
-      Sys.sleep(23)
+      cache_save(id_done2, file = "data/swb_id2.RDa")
 
       error_counter <- 0
     },
     error = function(e) {
+      warning(sprintf("Runner %s: %s", j, conditionMessage(e)))
       error_counter <<- error_counter + 1
 
       if (error_counter >= 10) {
