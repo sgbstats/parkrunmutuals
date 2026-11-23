@@ -59,16 +59,37 @@ with_fake_supabase({
   store$fail$POST <- NULL
 
   failing <- function(url) stop("parkrun unavailable")
-  expect_error(cache_fetch_results("data/results/Fail.csv", "fail", failing, config, sleep), "parkrun unavailable")
+  suppressWarnings(cache_fetch_results("data/results/Fail.csv", "fail", failing, config, sleep))
+  error_path <- "data/result-errors/Fail.csv.rds"
+  attempts <- cache_read_rds(error_path, config)
+  stopifnot(length(attempts) == 1L, attempts[[1]]$error == "parkrun unavailable")
   invalid <- function(url) list(results = data.frame())
-  expect_error(cache_fetch_results("data/results/Fail.csv", "fail", invalid, config, sleep), "Invalid results")
+  suppressWarnings(cache_fetch_results(
+    "data/results/Fail.csv", "fail", invalid, config, sleep, retry_failed = TRUE
+  ))
+  attempts <- cache_read_rds(error_path, config)
+  stopifnot(length(attempts) == 2L, attempts[[2]]$error == "Invalid or empty results returned")
   stopifnot(!cache_exists("data/results/Fail.csv", config), tail(sleeps, 1) == 23)
+  suppressWarnings(cache_fetch_results("data/results/Fail.csv", "fail", failing, config, sleep))
+  stopifnot(length(cache_read_rds(error_path, config)) == 2L)
   store$fail$PUT <- 500L
-  expect_error(cache_fetch_results("data/results/Fail.csv", "fail", fetch, config, sleep), "HTTP 500")
+  expect_error(cache_fetch_results(
+    "data/results/Fail.csv", "fail", fetch, config, sleep, retry_failed = TRUE
+  ), "HTTP 500")
   stopifnot(!cache_exists("data/results/Fail.csv", config))
   store$fail$PUT <- NULL
-  cache_fetch_results(c(paths, "data/results/Fail.csv"), c(urls, "fail"), fetch, config, sleep)
+  store$fail$PUT <- 500L
+  expect_error(
+    cache_fetch_results(
+      "data/results/UnableToLog.csv", "broken", failing, config, sleep
+    ),
+    "HTTP 500"
+  )
+  stopifnot(!cache_exists("data/result-errors/UnableToLog.csv.rds", config))
+  store$fail$PUT <- NULL
+  cache_fetch_results(c(paths, "data/results/Fail.csv"), c(urls, "fail"), fetch, config, sleep, retry_failed = TRUE)
   stopifnot(identical(calls, c(urls, "fail", "fail")))
+  stopifnot(length(cache_read_rds(error_path, config)) == 2L)
   expect_error(
     cache_write("data/results/Fail.csv", result, saveRDS, config, upsert = FALSE),
     "HTTP 409"
@@ -82,6 +103,39 @@ with_fake_supabase({
   stopifnot(history_calls == 2L)
   expect_error(cache_fetch_rds("data/null.rds", function() NULL, config, sleep), "No data")
   stopifnot(!cache_exists("data/null.rds", config))
+})
+with_fake_supabase({
+  legacy_log <- tempfile(fileext = ".csv")
+  writeLines(c("name,event_no,", "Bespoke,1", "Other,155"), legacy_log)
+  calls <- character()
+  fetch <- function(url) {
+    calls <<- c(calls, url)
+    if (url == "broken") stop("Request failed [404]")
+    list(results = data.frame(pos = 1L, parkrunner = "A", id = 1L, time = "25:00"))
+  }
+  sleep <- function(seconds) stopifnot(seconds == 23)
+  paths <- c("data/results/Bespoke1.csv", "data/results/Good1.csv", "data/results/Bad1.csv")
+  urls <- c("bespoke", "good", "broken")
+  events <- c("Bespoke", "Good", "Bad")
+  available <- suppressWarnings(cache_fetch_results(
+    paths, urls, fetch, config, sleep, events, legacy_log
+  ))
+  stopifnot(identical(available, paths[2]), identical(calls, c("good", "broken")))
+  attempts <- cache_read_rds("data/result-errors/Bad1.csv.rds", config)
+  stopifnot(
+    attempts[[1]]$event == "Bad", attempts[[1]]$url == "broken",
+    grepl("404", attempts[[1]]$error), nzchar(attempts[[1]]$time)
+  )
+  calls <- character()
+  suppressWarnings(cache_fetch_results(paths, urls, fetch, config, sleep, events, legacy_log))
+  stopifnot(length(calls) == 0L)
+  available <- suppressWarnings(cache_fetch_results(
+    paths, urls, fetch, config, sleep, events, legacy_log, retry_failed = TRUE
+  ))
+  stopifnot(identical(available, paths[1:2]), identical(calls, c("bespoke", "broken")))
+  stopifnot(length(cache_read_rds("data/result-errors/Bad1.csv.rds", config)) == 2L)
+  stopifnot(identical(readLines(legacy_log), c("name,event_no,", "Bespoke,1", "Other,155")))
+  unlink(legacy_log)
 })
 with_fake_supabase({
   path <- "data/results/Bootstrap-test-123.csv"
